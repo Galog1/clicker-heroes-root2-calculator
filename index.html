@@ -1,0 +1,1867 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Optimal Ancient levels and a root2 Outsider planner for Clicker Heroes, from your exported save. Runs entirely in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cellipse%20cx%3D%2216%22%20cy%3D%2216%22%20rx%3D%2213%22%20ry%3D%225.5%22%20transform%3D%22rotate(-24%2016%2016)%22%20fill%3D%22none%22%20stroke%3D%22%23a6a7c0%22%20stroke-width%3D%222%22%2F%3E%3Ccircle%20cx%3D%2216%22%20cy%3D%2216%22%20r%3D%226%22%20fill%3D%22%23f0b35a%22%2F%3E%3Ccircle%20cx%3D%2227%22%20cy%3D%2210.4%22%20r%3D%222.1%22%20fill%3D%22%23ecebf6%22%2F%3E%3C%2Fsvg%3E">
+<title>Clicker Heroes Root 2 Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&family=Spline+Sans+Mono:wght@400..600&display=swap">
+<style>
+/* Layout: a sticky control column on the left (save + options), the ledger of ancient levels on the right.
+   Palette: ink-violet ground, warm amber as the single accent, green only for "gain".
+   Type: Bricolage Grotesque for headings, Instrument Sans for UI, Spline Sans Mono for every number. */
+:root {
+  --bg: #0c0d15;
+  --panel: #14151f;
+  --panel-2: #1a1c29;
+  --field: #10111a;
+  --line: #2a2c3f;
+  --line-soft: #202235;
+  --fg: #ecebf6;
+  --fg-2: #a6a7c0;
+  --fg-3: #868799;
+  --accent: #f0b35a;
+  --accent-fg: #1b1204;
+  --accent-soft: rgba(240, 179, 90, 0.13);
+  --good: #62d4a0;
+  --bad: #ff8a97;
+  --glow: rgba(120, 100, 220, 0.16);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 18px 40px -24px rgba(0, 0, 0, 0.7);
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --sans: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f2f8;
+    --panel: #ffffff;
+    --panel-2: #f0eff7;
+    --field: #f8f7fc;
+    --line: #dcdae9;
+    --line-soft: #e8e6f1;
+    --fg: #171726;
+    --fg-2: #50516b;
+    --fg-3: #6a6b86;
+    --accent: #a35a00;
+    --accent-fg: #ffffff;
+    --accent-soft: rgba(163, 90, 0, 0.1);
+    --good: #12744d;
+    --bad: #c2263c;
+    --glow: rgba(120, 100, 220, 0.12);
+    --shadow: 0 1px 2px rgba(30, 28, 60, 0.05), 0 18px 40px -28px rgba(30, 28, 60, 0.25);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f2f8;
+  --panel: #ffffff;
+  --panel-2: #f0eff7;
+  --field: #f8f7fc;
+  --line: #dcdae9;
+  --line-soft: #e8e6f1;
+  --fg: #171726;
+  --fg-2: #50516b;
+  --fg-3: #6a6b86;
+  --accent: #a35a00;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(163, 90, 0, 0.1);
+  --good: #12744d;
+  --bad: #c2263c;
+  --glow: rgba(120, 100, 220, 0.12);
+  --shadow: 0 1px 2px rgba(30, 28, 60, 0.05), 0 18px 40px -28px rgba(30, 28, 60, 0.25);
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: radial-gradient(1100px 520px at 10% -8%, var(--glow), transparent 62%), var(--bg);
+  color: var(--fg);
+  font: 15px/1.5 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 22px 56px;
+}
+.shell { max-width: 1200px; margin: 0 auto; }
+h1, h2, h3, p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+/* ---------- header ---------- */
+.top { display: flex; align-items: center; gap: 14px; padding-block: 4px 22px; }
+.mark { flex: none; }
+.mark .core { fill: var(--accent); }
+.mark .ring { fill: none; stroke: var(--fg-2); stroke-width: 1.6; }
+.mark .moon { fill: var(--fg); }
+.top h1 { font: 700 clamp(22px, 3.2vw, 29px)/1.1 var(--display); letter-spacing: -0.02em; text-wrap: balance; }
+.top p { color: var(--fg-2); font-size: 13.5px; margin-top: 2px; }
+
+/* ---------- layout ---------- */
+.layout { display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.side { display: grid; gap: 16px; min-width: 0; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; scrollbar-width: thin; padding: 1px; }
+.main { display: grid; gap: 16px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); min-width: 0; }
+.card > .pad { padding: 16px 18px; }
+.card h2, .opts > summary { font: 650 16px/1.2 var(--display); letter-spacing: -0.01em; }
+.hint { color: var(--fg-3); font-size: 12.5px; line-height: 1.45; }
+
+/* ---------- save card ---------- */
+.save { display: grid; gap: 12px; padding: 16px 18px; }
+.save.drag { outline: 2px dashed var(--accent); outline-offset: 3px; }
+.save textarea {
+  width: 100%; min-height: 74px; resize: vertical; background: var(--field); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 10px; font: 12.5px/1.4 var(--mono); white-space: pre; overflow: auto;
+}
+.save textarea::placeholder { color: var(--fg-3); }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.status { display: flex; gap: 8px; align-items: baseline; font-size: 13px; color: var(--fg-2); min-width: 0; }
+.chip { flex: none; font: 600 11.5px/1 var(--sans); padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); letter-spacing: 0.01em; }
+.chip.ok { background: rgba(98, 212, 160, 0.14); color: var(--good); }
+.chip.err { background: rgba(255, 138, 151, 0.14); color: var(--bad); }
+.status span:last-child { min-width: 0; overflow-wrap: anywhere; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; font-weight: 600; font-size: 13.5px;
+  color: var(--fg); transition: border-color 0.12s, background 0.12s, filter 0.12s, transform 0.06s;
+}
+.btn:hover { border-color: var(--fg-3); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn svg { width: 15px; height: 15px; flex: none; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); box-shadow: 0 8px 20px -12px var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); border-color: var(--accent); }
+.btn.soft { background: var(--accent-soft); border-color: var(--line); border-color: color-mix(in srgb, var(--accent) 38%, transparent); color: var(--accent); }
+.btn.soft:hover { border-color: var(--accent); }
+.btn.small { padding: 5px 10px; font-size: 12.5px; }
+
+/* ---------- options ---------- */
+.opts > summary { list-style: none; cursor: pointer; padding: 16px 18px; display: flex; justify-content: space-between; align-items: center; }
+.opts > summary::-webkit-details-marker { display: none; }
+.opts > summary::after { content: ""; width: 8px; height: 8px; border-right: 2px solid var(--fg-3); border-bottom: 2px solid var(--fg-3); transform: rotate(45deg) translateY(-2px); transition: transform 0.15s; }
+.opts[open] > summary::after { transform: rotate(-135deg); }
+.opts-body { display: grid; gap: 16px; padding: 0 18px 18px; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field > label, .field > .lbl { font-weight: 600; font-size: 13.5px; display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
+.field > label small, .lbl small { font-weight: 400; color: var(--fg-3); }
+.input {
+  width: 100%; min-width: 0; background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+}
+.input.num { font-size: 13.5px; }
+.input:focus-visible { outline-offset: 1px; }
+select.input { padding-right: 6px; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; background: var(--field); border: 1px solid var(--line); border-radius: 10px; }
+.seg label { position: relative; display: block; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: block; text-align: center; padding: 7px 6px; border-radius: 7px; color: var(--fg-2); font-weight: 600; font-size: 13.5px; }
+.seg input:checked + span { background: var(--panel-2); color: var(--fg); box-shadow: 0 0 0 1px var(--line); }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
+.switch { display: flex; gap: 11px; align-items: flex-start; cursor: pointer; font-size: 14px; }
+.switch input {
+  appearance: none; -webkit-appearance: none; flex: none; width: 34px; height: 20px; margin: 1px 0 0; border-radius: 999px;
+  background: var(--line); position: relative; cursor: pointer; transition: background 0.15s;
+}
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--fg-2); transition: transform 0.15s, background 0.15s; }
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { transform: translateX(14px); background: var(--accent-fg); }
+.sub { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; align-items: center; margin-left: 45px; color: var(--fg-2); font-size: 13.5px; }
+.sub .label-wide { grid-column: 1 / -1; }
+
+/* ---------- summary ---------- */
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+.stat { background: var(--panel); padding: 15px 18px; display: grid; gap: 3px; min-width: 0; align-content: start; }
+.stat .k { color: var(--fg-2); font-size: 13px; }
+.stat .v { font: 600 21px/1.2 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.stat .s { font-size: 12.5px; color: var(--fg-3); }
+.stat .s b { color: var(--good); font-weight: 600; }
+
+/* ---------- tabs ---------- */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); padding: 0 10px; overflow-x: auto; scrollbar-width: none; }
+.tab { background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 13px 12px 11px; font-weight: 650; font-size: 14px; color: var(--fg-2); white-space: nowrap; }
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.panel { padding: 6px 0 0; }
+.panel[hidden] { display: none; }
+.bar-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 18px; }
+.bar-tools p { color: var(--fg-2); font-size: 13.5px; max-width: 58ch; }
+
+/* ---------- ledger ---------- */
+.ledger { list-style: none; margin: 0; padding: 0; }
+.ledger > li { display: grid; grid-template-columns: minmax(110px, 1.1fr) minmax(88px, 1fr) minmax(88px, 1fr) minmax(120px, 1.1fr) minmax(130px, 1.2fr); gap: 4px 14px; align-items: center; padding: 9px 18px; border-top: 1px solid var(--line-soft); }
+.ledger > li.head { color: var(--fg-3); font-size: 12.5px; font-weight: 600; padding-block: 8px; border-top: 0; background: var(--panel-2); }
+.ledger > li:not(.head):hover { background: color-mix(in srgb, var(--panel-2) 60%, transparent); }
+.ledger .name { font-weight: 650; }
+.ledger .cell { font-size: 13px; color: var(--fg-2); min-width: 0; overflow-wrap: anywhere; }
+.ledger .cell.target { color: var(--fg); }
+.ledger .cell::before { display: none; }
+.buy {
+  justify-self: start; font: 600 13px/1 var(--mono); font-variant-numeric: tabular-nums; padding: 8px 10px; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); border: 1px solid transparent; transition: background 0.12s, color 0.12s, border-color 0.12s;
+  max-width: 100%; overflow-wrap: anywhere; text-align: left;
+}
+.buy:hover { border-color: var(--accent); }
+.buy.done { background: var(--accent); color: var(--accent-fg); }
+.buy.none { background: none; color: var(--fg-3); cursor: default; padding-inline: 2px; font-weight: 400; }
+.cost { display: grid; gap: 5px; }
+.meter { display: block; height: 4px; border-radius: 4px; background: var(--line-soft); overflow: hidden; }
+.meter i { display: block; height: 100%; min-width: 0; background: var(--accent); opacity: 0.85; border-radius: 4px; }
+.foot-note { padding: 12px 18px 16px; color: var(--fg-3); font-size: 12.5px; border-top: 1px solid var(--line-soft); }
+
+/* ---------- export ---------- */
+.export-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.export-msg { padding: 0 18px 12px; font-size: 13px; line-height: 1.45; color: var(--fg-2); max-width: 80ch; }
+.export-msg.ok { color: var(--good); }
+.export-msg.err { color: var(--bad); }
+.save-dialog {
+  border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--fg); padding: 0;
+  width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6);
+}
+.save-dialog::backdrop { background: rgba(6, 6, 14, 0.62); }
+.save-dialog .dlg { display: grid; gap: 12px; padding: 18px; }
+.dlg-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.dlg-head h2 { font: 650 17px/1.2 var(--display); letter-spacing: -0.01em; }
+.save-dialog textarea {
+  width: 100%; min-height: 140px; resize: vertical; background: var(--field); border: 1px solid var(--line); border-radius: 8px;
+  padding: 9px 10px; font: 12px/1.45 var(--mono); white-space: pre-wrap; word-break: break-all;
+}
+
+/* ---------- simple lists ---------- */
+.plain { list-style: none; margin: 0; padding: 0 0 4px; }
+.plain > li { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(70px, 0.6fr) minmax(0, 2.6fr); gap: 4px 14px; padding: 10px 18px; border-top: 1px solid var(--line-soft); align-items: baseline; }
+.plain > li:first-child { border-top: 0; }
+.plain .name { font-weight: 650; }
+.plain .eff { color: var(--fg-2); font-size: 13.5px; overflow-wrap: anywhere; }
+.kv { display: grid; gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
+.kv > div { background: var(--panel); padding: 13px 18px; display: flex; justify-content: space-between; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+.kv .k { color: var(--fg-2); font-size: 13.5px; }
+.kv .v { font: 600 15px var(--mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-align: right; }
+.sec-title { padding: 16px 18px 6px; font: 650 15px/1.2 var(--display); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.steps { list-style: none; margin: 0; padding: 0; }
+.steps li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 18px; border-top: 1px solid var(--line-soft); flex-wrap: wrap; font-size: 13.5px; }
+.steps li b { font-family: var(--mono); font-weight: 600; color: var(--good); }
+.empty { padding: 28px 18px; color: var(--fg-2); }
+
+/* ---------- mode switch ---------- */
+.top { flex-wrap: wrap; row-gap: 14px; }
+.modes { margin-left: auto; display: inline-grid; grid-auto-flow: column; gap: 3px; padding: 3px; background: var(--field); border: 1px solid var(--line); border-radius: 10px; }
+.mode { background: none; border: 0; border-radius: 7px; padding: 8px 14px; font-weight: 650; font-size: 14px; color: var(--fg-2); white-space: nowrap; }
+.mode:hover { color: var(--fg); }
+.mode[aria-selected="true"] { background: var(--panel-2); color: var(--fg); box-shadow: 0 0 0 1px var(--line); }
+
+/* ---------- outsider planner ---------- */
+[hidden] { display: none !important; }
+.view { display: grid; gap: 16px; min-width: 0; }
+.ledger.out > li { grid-template-columns: minmax(110px, 1.1fr) minmax(90px, 0.9fr) minmax(90px, 0.8fr) minmax(150px, 1.4fr); }
+.lvl { font: 600 15px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--accent); }
+.now-cell { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.codeline { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; color: var(--fg-2); font-size: 13.5px; }
+.codeline .num { color: var(--fg); font-size: 13px; overflow-wrap: anywhere; }
+.cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
+.cols2 .kv { border-top: 1px solid var(--line); }
+.card .kv { border-radius: 0 0 14px 14px; overflow: hidden; }
+.notes { list-style: none; margin: 0; padding: 0 0 6px; }
+.notes li { padding: 10px 18px; border-top: 1px solid var(--line-soft); color: var(--fg-2); font-size: 13.5px; max-width: 90ch; }
+.notes li b { color: var(--fg); }
+.field-err { color: var(--bad); font-size: 12.5px; }
+
+/* ---------- about ---------- */
+.about summary { cursor: pointer; padding: 14px 18px; font-weight: 650; color: var(--fg-2); }
+.about .body { padding: 0 18px 18px; color: var(--fg-2); font-size: 13.5px; display: grid; gap: 8px; max-width: 80ch; }
+.about a { color: var(--accent); }
+
+/* ---------- toast ---------- */
+#toast {
+  position: fixed; left: 50%; transform: translate(-50%, 12px); bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  background: var(--fg); color: var(--bg); padding: 9px 14px; border-radius: 10px; font-size: 13.5px; font-weight: 600; opacity: 0; pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s; max-width: calc(100vw - 32px); z-index: 20; overflow-wrap: anywhere;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+#fatal { padding: 24px; border: 1px solid var(--bad); border-radius: 12px; color: var(--bad); }
+
+/* ---------- narrow ---------- */
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .side { position: static; max-height: none; overflow: visible; }
+}
+@media (max-width: 680px) {
+  .ledger > li.head { display: none; }
+  .ledger > li { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name buy" "now target" "cost cost"; padding-block: 12px; gap: 8px 14px; }
+  .ledger .name { grid-area: name; font-size: 15px; }
+  .ledger .buy { grid-area: buy; justify-self: end; }
+  .ledger .now { grid-area: now; }
+  .ledger .target { grid-area: target; }
+  .ledger .cost { grid-area: cost; }
+  .ledger .cell::before { display: block; content: attr(data-label); color: var(--fg-3); font: 400 11.5px var(--sans); margin-bottom: 1px; }
+  .plain > li { grid-template-columns: minmax(0, 1fr) auto; }
+  .plain .eff { grid-column: 1 / -1; }
+  .stat .v { font-size: 18px; }
+  .modes { margin-left: 0; width: 100%; grid-auto-flow: row; grid-template-columns: 1fr 1fr; }
+  .mode { padding-inline: 8px; }
+  .ledger.out > li { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name lvl" "now now" "cost cost"; }
+  .ledger.out .lvl { grid-area: lvl; justify-self: end; font-size: 17px; }
+  .ledger.out .now { grid-area: now; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+<style>:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <svg class="mark" viewBox="0 0 32 32" width="34" height="34" aria-hidden="true">
+      <ellipse class="ring" cx="16" cy="16" rx="13" ry="5.5" transform="rotate(-24 16 16)"></ellipse>
+      <circle class="core" cx="16" cy="16" r="6"></circle>
+      <circle class="moon" cx="27" cy="10.4" r="2.1"></circle>
+    </svg>
+    <div>
+      <h1>Clicker Heroes Root 2 Calculator</h1>
+      <p id="subtitle">Optimal ancient levels for your hero souls. Rules of v1.0e10.</p>
+    </div>
+    <nav class="modes" role="tablist" aria-label="Calculator">
+      <button class="mode" role="tab" type="button" data-mode="ancients" aria-selected="true">Ancients</button>
+      <button class="mode" role="tab" type="button" data-mode="outsiders" aria-selected="false">Outsider planner</button>
+    </nav>
+  </header>
+
+  <div id="fatal" hidden></div>
+
+  <div class="layout" id="app">
+    <aside class="side">
+      <section class="card save" id="saveCard" aria-labelledby="saveTitle">
+        <h2 id="saveTitle">Your save</h2>
+        <textarea id="saveInput" wrap="off" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Paste your exported save here" aria-label="Exported save game"></textarea>
+        <div class="row-actions">
+          <button class="btn soft" id="openFile" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Open a file</button>
+          <input id="fileInput" type="file" hidden>
+          <span class="hint">or drop one here. In game: Settings, then Export save.</span>
+        </div>
+        <div class="status" id="status" aria-live="polite"></div>
+      </section>
+
+      <details class="card opts" id="options" open>
+        <summary>Options</summary>
+        <div class="opts-body">
+          <div class="field">
+            <div class="lbl">Playstyle <small id="detectedNote"></small></div>
+            <div class="seg" role="radiogroup" aria-label="Playstyle">
+              <label><input type="radio" name="playstyle" value="idle" checked><span>Idle</span></label>
+              <label><input type="radio" name="playstyle" value="hybrid"><span>Hybrid</span></label>
+              <label><input type="radio" name="playstyle" value="active"><span>Active</span></label>
+            </div>
+          </div>
+          <div class="field" id="ratioField" hidden>
+            <label for="ratio">Fragsworth per Siyalatas <small>0.1 to 1000</small></label>
+            <input class="input num" id="ratio" type="number" min="0.1" max="1000" step="0.1" value="1" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="zone">Ascension zone</label>
+            <input class="input num" id="zone" type="text" inputmode="numeric" autocomplete="off" placeholder="">
+            <p class="hint">Only Atman and Kumawakamaru use this. Leave it empty to use the highest zone in your save.</p>
+          </div>
+          <div class="field">
+            <label for="hs">Hero souls to spend</label>
+            <input class="input num" id="hs" type="text" autocomplete="off" placeholder="">
+            <p class="hint">Leave empty to use the souls in your save, or type a number to plan ahead.</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="useNext"><span>Count the souls you would get from ascending now</span></label>
+          <label class="switch"><input type="checkbox" id="wep8k"><span>My best hero is level 8000 or higher</span></label>
+          <div class="field">
+            <label class="switch"><input type="checkbox" id="other"><span>Also level Vaagur, Revolc and the skill ancients</span></label>
+            <div class="sub" id="otherSub" hidden>
+              <input class="input num" id="otherLower" type="number" min="0" max="10" step="1" value="5" aria-label="Levels below the base ancient">
+              <span>levels below</span>
+              <select class="input label-wide" id="otherBase" aria-label="Base ancient"></select>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="card opts" id="outOptions" open hidden>
+        <summary>Options</summary>
+        <div class="opts-body">
+          <div class="field">
+            <label for="outAs">Ancient souls</label>
+            <input class="input num" id="outAs" type="text" inputmode="numeric" autocomplete="off" placeholder="">
+            <p class="hint">Your total ancient souls, spent or not. Leave it empty to use your save, or type a number to plan ahead.</p>
+            <p class="field-err" id="outAsErr" hidden>Ancient souls must be a number, zero or more.</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="outSkip"><span>Skip breakpoints<br><small class="hint">Much faster, but you skip a lot of the game.</small></span></label>
+          <label class="switch"><input type="checkbox" id="outTips" checked><span>Show notes for this run</span></label>
+        </div>
+      </details>
+    </aside>
+
+    <main class="main">
+      <div class="view" id="ancientView">
+      <section class="summary" aria-label="Summary">
+        <div class="stat"><span class="k">Hero souls to spend</span><span class="v" id="sHs">-</span><span class="s" id="sHsNote">&nbsp;</span></div>
+        <div class="stat"><span class="k">Spent on ancients</span><span class="v" id="sSpent">-</span><span class="s" id="sSpentNote">&nbsp;</span></div>
+        <div class="stat"><span class="k">Left over</span><span class="v" id="sLeft">-</span><span class="s">&nbsp;</span></div>
+        <div class="stat"><span class="k">Ancient souls</span><span class="v" id="sAs">-</span><span class="s" id="sAsNote">&nbsp;</span></div>
+      </section>
+
+      <section class="card" aria-label="Results">
+        <div class="tabs" role="tablist" aria-label="Result sections">
+          <button class="tab" role="tab" id="t-ancients" aria-controls="p-ancients" aria-selected="true" type="button">Ancients</button>
+          <button class="tab" role="tab" id="t-outsiders" aria-controls="p-outsiders" aria-selected="false" tabindex="-1" type="button">Outsiders and souls</button>
+          <button class="tab" role="tab" id="t-raid" aria-controls="p-raid" aria-selected="false" tabindex="-1" type="button">Clan raid</button>
+        </div>
+
+        <div class="panel" role="tabpanel" id="p-ancients" aria-labelledby="t-ancients">
+          <div class="bar-tools">
+            <p>Tap an amount to copy it, then V-click it into the game to level up in one go.</p>
+            <div class="export-group">
+              <button class="btn primary" id="exportBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>Export a prelevelled save</button>
+              <button class="btn soft" id="showExport" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Show save</button>
+            </div>
+          </div>
+          <p class="export-msg" id="exportNote" role="status" hidden></p>
+          <ul class="ledger" id="ledger"></ul>
+          <p class="foot-note" id="hiddenNote" hidden></p>
+        </div>
+
+        <div class="panel" role="tabpanel" id="p-outsiders" aria-labelledby="t-outsiders" hidden>
+          <ul class="plain" id="outsiderList"></ul>
+          <div class="kv" id="soulKv"></div>
+          <div class="sec-title"><span>Next ancient souls</span>
+            <span class="row-actions"><button class="btn small" id="asLess" type="button">Earlier</button><button class="btn small" id="asMore" type="button">Later</button></span>
+          </div>
+          <ul class="steps" id="asSteps"></ul>
+        </div>
+
+        <div class="panel" role="tabpanel" id="p-raid" aria-labelledby="t-raid" hidden>
+          <div class="kv" id="raidKv"></div>
+        </div>
+      </section>
+      </div>
+
+      <div class="view" id="outsiderView" hidden>
+        <section class="summary" aria-label="Outsider summary">
+          <div class="stat"><span class="k">Ancient souls</span><span class="v" id="oAs">-</span><span class="s" id="oAsNote">&nbsp;</span></div>
+          <div class="stat"><span class="k">Unspent after buying</span><span class="v" id="oUnspent">-</span><span class="s">ancient souls</span></div>
+          <div class="stat"><span class="k">Zone to reach</span><span class="v" id="oHze">-</span><span class="s" id="oHzeNote">&nbsp;</span></div>
+          <div class="stat"><span class="k">Ancient souls after</span><span class="v" id="oAsAfter">-</span><span class="s" id="oAsAfterNote">&nbsp;</span></div>
+        </section>
+
+        <section class="card" aria-label="Recommended outsider levels">
+          <div class="bar-tools">
+            <div class="codeline"><span>Build code</span><span class="num" id="shareCode"></span></div>
+            <div class="row-actions">
+              <button class="btn soft" id="copyShare" type="button">Copy code</button>
+              <button class="btn primary" id="outExportBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>Export a prelevelled save</button>
+              <button class="btn soft" id="outShowExport" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Show save</button>
+            </div>
+          </div>
+          <p class="export-msg" id="outExportNote" role="status" hidden></p>
+          <ul class="ledger out" id="outLedger"></ul>
+        </section>
+
+        <div class="cols2">
+          <section class="card" aria-label="End of transcension estimates">
+            <div class="sec-title"><span>End of this transcension</span></div>
+            <div class="kv" id="estKv"></div>
+          </section>
+          <section class="card" aria-label="Buffed stats at the highest zone">
+            <div class="sec-title"><span>Buffed stats at your highest zone</span></div>
+            <div class="kv" id="buffKv"></div>
+            <p class="foot-note" id="buffNote" hidden>The second figure assumes you ascend with only the hero souls needed to ascend forever at this TP.</p>
+          </section>
+        </div>
+
+        <section class="card" id="tipsCard" aria-label="Notes for this run">
+          <div class="sec-title"><span>Notes for this run</span></div>
+          <ul class="notes" id="tipList"></ul>
+        </section>
+      </div>
+
+      <details class="card about">
+        <summary>About and credits</summary>
+        <div class="body">
+          <p>Based on the Ancient Calculator by graceoflives, which was inspired by Shruikan864's Rules of Thumb 1.0 spreadsheet and sugima's 1.0 Rules of Thumb post. Thanks to Kragnir for the better estimates of the NUA ancients, princeandrew01 for the alpha formula and dfslkwe for the faster search.</p>
+          <p>The Ancients calculator uses the rules of the original as of March 2018 (v1.0e10, no level limits). This rebuild keeps them and drops every outside dependency, so it keeps working when other sites go away. Everything runs in your browser and your save never leaves it.</p>
+          <p>The Outsider planner is based on driej's Outsider Recommender for the root2 mod of Clicker Heroes, and follows the root2 rules, which differ from the regular game. Ancient souls decide the breakpoint, the outsider levels and the end of run estimates.</p>
+        </div>
+      </details>
+    </main>
+  </div>
+</div>
+<dialog class="save-dialog" id="saveDialog" aria-labelledby="dlgTitle">
+  <div class="dlg">
+    <div class="dlg-head">
+      <h2 id="dlgTitle">Your new save</h2>
+      <button class="btn small" id="dlgClose" type="button">Close</button>
+    </div>
+    <p class="hint" id="dlgNote"></p>
+    <textarea id="dlgText" spellcheck="false" readonly aria-label="New save to import"></textarea>
+    <div class="row-actions">
+      <button class="btn primary" id="dlgCopy" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>Copy save</button>
+      <span class="hint">In game: Settings, then Import save. Back up your current save first.</span>
+    </div>
+  </div>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>!function(n){"use strict";
+/*!
+   *  decimal.js v10.4.3
+   *  An arbitrary-precision Decimal type for JavaScript.
+   *  https://github.com/MikeMcl/decimal.js
+   *  Copyright (c) 2022 Michael Mclaughlin <M8ch88l@gmail.com>
+   *  MIT Licence
+   */var e,i,t,r,s=9e15,o=1e9,u="0123456789abcdef",c="2.3025850929940456840179914546843642076011014886287729760333279009675726096773524802359972050895982983419677840422862486334095254650828067566662873690987816894829072083255546808437998948262331985283935053089653777326288461633662222876982198867465436674744042432743651550489343149393914796194044002221051017141748003688084012647080685567743216228355220114804663715659121373450747856947683463616792101806445070648000277502684916746550586856935673420670581136429224554405758925724208241314695689016758940256776311356919292033376587141660230105703089634572075440370847469940168269282808481184289314848524948644871927809676271275775397027668605952496716674183485704422507197965004714951050492214776567636938662976979522110718264549734772662425709429322582798502585509785265383207606726317164309505995087807523710333101197857547331541421808427543863591778117054309827482385045648019095610299291824318237525357709750539565187697510374970888692180205189339507238539205144634197265287286965110862571492198849978748873771345686209167058",f="3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679821480865132823066470938446095505822317253594081284811174502841027019385211055596446229489549303819644288109756659334461284756482337867831652712019091456485669234603486104543266482133936072602491412737245870066063155881748815209209628292540917153643678925903600113305305488204665213841469519415116094330572703657595919530921861173819326117931051185480744623799627495673518857527248912279381830119491298336733624406566430860213949463952247371907021798609437027705392171762931767523846748184676694051320005681271452635608277857713427577896091736371787214684409012249534301465495853710507922796892589235420199561121290219608640344181598136297747713099605187072113499999983729780499510597317328160963185950244594553469083026425223082533446850352619311881710100031378387528865875332083814206171776691473035982534904287554687311595628638823537875937519577818577805321712268066130019278766111959092164201989380952572010654858632789",a={precision:20,rounding:4,modulo:1,toExpNeg:-7,toExpPos:21,minE:-s,maxE:s,crypto:!1},l=!0,h="[DecimalError] ",d=h+"Invalid argument: ",p=h+"Precision limit exceeded",g=h+"crypto unavailable",m="[object Decimal]",w=Math.floor,v=Math.pow,N=/^0b([01]+(\.[01]*)?|\.[01]+)(p[+-]?\d+)?$/i,b=/^0x([0-9a-f]+(\.[0-9a-f]*)?|\.[0-9a-f]+)(p[+-]?\d+)?$/i,E=/^0o([0-7]+(\.[0-7]*)?|\.[0-7]+)(p[+-]?\d+)?$/i,x=/^(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/i,y=1e7,M=c.length-1,q=f.length-1,O={toStringTag:m};function D(n){var e,i,t,r=n.length-1,s="",o=n[0];if(r>0){for(s+=o,e=1;e<r;e++)(i=7-(t=n[e]+"").length)&&(s+=k(i)),s+=t;(i=7-(t=(o=n[e])+"").length)&&(s+=k(i))}else if(0===o)return"0";for(;o%10==0;)o/=10;return s+o}function F(n,e,i){if(n!==~~n||n<e||n>i)throw Error(d+n)}function A(n,e,i,t){var r,s,o,u;for(s=n[0];s>=10;s/=10)--e;return--e<0?(e+=7,r=0):(r=Math.ceil((e+1)/7),e%=7),s=v(10,7-e),u=n[r]%s|0,null==t?e<3?(0==e?u=u/100|0:1==e&&(u=u/10|0),o=i<4&&99999==u||i>3&&49999==u||5e4==u||0==u):o=(i<4&&u+1==s||i>3&&u+1==s/2)&&(n[r+1]/s/100|0)==v(10,e-2)-1||(u==s/2||0==u)&&!(n[r+1]/s/100|0):e<4?(0==e?u=u/1e3|0:1==e?u=u/100|0:2==e&&(u=u/10|0),o=(t||i<4)&&9999==u||!t&&i>3&&4999==u):o=((t||i<4)&&u+1==s||!t&&i>3&&u+1==s/2)&&(n[r+1]/s/1e3|0)==v(10,e-3)-1,o}function S(n,e,i){for(var t,r,s=[0],o=0,c=n.length;o<c;){for(r=s.length;r--;)s[r]*=e;for(s[0]+=u.indexOf(n.charAt(o++)),t=0;t<s.length;t++)s[t]>i-1&&(void 0===s[t+1]&&(s[t+1]=0),s[t+1]+=s[t]/i|0,s[t]%=i)}return s.reverse()}O.absoluteValue=O.abs=function(){var n=new this.constructor(this);return n.s<0&&(n.s=1),P(n)},O.ceil=function(){return P(new this.constructor(this),this.e+1,2)},O.clampedTo=O.clamp=function(n,e){var i=this,t=i.constructor;if(n=new t(n),e=new t(e),!n.s||!e.s)return new t(NaN);if(n.gt(e))throw Error(d+e);return i.cmp(n)<0?n:i.cmp(e)>0?e:new t(i)},O.comparedTo=O.cmp=function(n){var e,i,t,r,s=this,o=s.d,u=(n=new s.constructor(n)).d,c=s.s,f=n.s;if(!o||!u)return c&&f?c!==f?c:o===u?0:!o^c<0?1:-1:NaN;if(!o[0]||!u[0])return o[0]?c:u[0]?-f:0;if(c!==f)return c;if(s.e!==n.e)return s.e>n.e^c<0?1:-1;for(e=0,i=(t=o.length)<(r=u.length)?t:r;e<i;++e)if(o[e]!==u[e])return o[e]>u[e]^c<0?1:-1;return t===r?0:t>r^c<0?1:-1},O.cosine=O.cos=function(){var n,e,i=this,t=i.constructor;return i.d?i.d[0]?(n=t.precision,e=t.rounding,t.precision=n+Math.max(i.e,i.sd())+7,t.rounding=1,i=function(n,e){var i,t,r;if(e.isZero())return e;t=e.d.length,t<32?r=(1/z(4,i=Math.ceil(t/3))).toString():(i=16,r="2.3283064365386962890625e-10");n.precision+=i,e=J(n,1,e.times(r),new n(1));for(var s=i;s--;){var o=e.times(e);e=o.times(o).minus(o).times(8).plus(1)}return n.precision-=i,e}(t,G(t,i)),t.precision=n,t.rounding=e,P(2==r||3==r?i.neg():i,n,e,!0)):new t(1):new t(NaN)},O.cubeRoot=O.cbrt=function(){var n,e,i,t,r,s,o,u,c,f,a=this,h=a.constructor;if(!a.isFinite()||a.isZero())return new h(a);for(l=!1,(s=a.s*v(a.s*a,1/3))&&Math.abs(s)!=1/0?t=new h(s.toString()):(i=D(a.d),(s=((n=a.e)-i.length+1)%3)&&(i+=1==s||-2==s?"0":"00"),s=v(i,1/3),n=w((n+1)/3)-(n%3==(n<0?-1:2)),(t=new h(i=s==1/0?"5e"+n:(i=s.toExponential()).slice(0,i.indexOf("e")+1)+n)).s=a.s),o=(n=h.precision)+3;;)if(f=(c=(u=t).times(u).times(u)).plus(a),t=Z(f.plus(a).times(u),f.plus(c),o+2,1),D(u.d).slice(0,o)===(i=D(t.d)).slice(0,o)){if("9999"!=(i=i.slice(o-3,o+1))&&(r||"4999"!=i)){+i&&(+i.slice(1)||"5"!=i.charAt(0))||(P(t,n+1,1),e=!t.times(t).times(t).eq(a));break}if(!r&&(P(u,n+1,0),u.times(u).times(u).eq(a))){t=u;break}o+=4,r=1}return l=!0,P(t,n,h.rounding,e)},O.decimalPlaces=O.dp=function(){var n,e=this.d,i=NaN;if(e){if(i=7*((n=e.length-1)-w(this.e/7)),n=e[n])for(;n%10==0;n/=10)i--;i<0&&(i=0)}return i},O.dividedBy=O.div=function(n){return Z(this,new this.constructor(n))},O.dividedToIntegerBy=O.divToInt=function(n){var e=this.constructor;return P(Z(this,new e(n),0,1,1),e.precision,e.rounding)},O.equals=O.eq=function(n){return 0===this.cmp(n)},O.floor=function(){return P(new this.constructor(this),this.e+1,3)},O.greaterThan=O.gt=function(n){return this.cmp(n)>0},O.greaterThanOrEqualTo=O.gte=function(n){var e=this.cmp(n);return 1==e||0===e},O.hyperbolicCosine=O.cosh=function(){var n,e,i,t,r,s=this,o=s.constructor,u=new o(1);if(!s.isFinite())return new o(s.s?1/0:NaN);if(s.isZero())return u;i=o.precision,t=o.rounding,o.precision=i+Math.max(s.e,s.sd())+4,o.rounding=1,(r=s.d.length)<32?e=(1/z(4,n=Math.ceil(r/3))).toString():(n=16,e="2.3283064365386962890625e-10"),s=J(o,1,s.times(e),new o(1),!0);for(var c,f=n,a=new o(8);f--;)c=s.times(s),s=u.minus(c.times(a.minus(c.times(a))));return P(s,o.precision=i,o.rounding=t,!0)},O.hyperbolicSine=O.sinh=function(){var n,e,i,t,r=this,s=r.constructor;if(!r.isFinite()||r.isZero())return new s(r);if(e=s.precision,i=s.rounding,s.precision=e+Math.max(r.e,r.sd())+4,s.rounding=1,(t=r.d.length)<3)r=J(s,2,r,r,!0);else{n=(n=1.4*Math.sqrt(t))>16?16:0|n,r=J(s,2,r=r.times(1/z(5,n)),r,!0);for(var o,u=new s(5),c=new s(16),f=new s(20);n--;)o=r.times(r),r=r.times(u.plus(o.times(c.times(o).plus(f))))}return s.precision=e,s.rounding=i,P(r,e,i,!0)},O.hyperbolicTangent=O.tanh=function(){var n,e,i=this,t=i.constructor;return i.isFinite()?i.isZero()?new t(i):(n=t.precision,e=t.rounding,t.precision=n+7,t.rounding=1,Z(i.sinh(),i.cosh(),t.precision=n,t.rounding=e)):new t(i.s)},O.inverseCosine=O.acos=function(){var n,e=this,i=e.constructor,t=e.abs().cmp(1),r=i.precision,s=i.rounding;return-1!==t?0===t?e.isNeg()?L(i,r,s):new i(0):new i(NaN):e.isZero()?L(i,r+4,s).times(.5):(i.precision=r+6,i.rounding=1,e=e.asin(),n=L(i,r+4,s).times(.5),i.precision=r,i.rounding=s,n.minus(e))},O.inverseHyperbolicCosine=O.acosh=function(){var n,e,i=this,t=i.constructor;return i.lte(1)?new t(i.eq(1)?0:NaN):i.isFinite()?(n=t.precision,e=t.rounding,t.precision=n+Math.max(Math.abs(i.e),i.sd())+4,t.rounding=1,l=!1,i=i.times(i).minus(1).sqrt().plus(i),l=!0,t.precision=n,t.rounding=e,i.ln()):new t(i)},O.inverseHyperbolicSine=O.asinh=function(){var n,e,i=this,t=i.constructor;return!i.isFinite()||i.isZero()?new t(i):(n=t.precision,e=t.rounding,t.precision=n+2*Math.max(Math.abs(i.e),i.sd())+6,t.rounding=1,l=!1,i=i.times(i).plus(1).sqrt().plus(i),l=!0,t.precision=n,t.rounding=e,i.ln())},O.inverseHyperbolicTangent=O.atanh=function(){var n,e,i,t,r=this,s=r.constructor;return r.isFinite()?r.e>=0?new s(r.abs().eq(1)?r.s/0:r.isZero()?r:NaN):(n=s.precision,e=s.rounding,t=r.sd(),Math.max(t,n)<2*-r.e-1?P(new s(r),n,e,!0):(s.precision=i=t-r.e,r=Z(r.plus(1),new s(1).minus(r),i+n,1),s.precision=n+4,s.rounding=1,r=r.ln(),s.precision=n,s.rounding=e,r.times(.5))):new s(NaN)},O.inverseSine=O.asin=function(){var n,e,i,t,r=this,s=r.constructor;return r.isZero()?new s(r):(e=r.abs().cmp(1),i=s.precision,t=s.rounding,-1!==e?0===e?((n=L(s,i+4,t).times(.5)).s=r.s,n):new s(NaN):(s.precision=i+6,s.rounding=1,r=r.div(new s(1).minus(r.times(r)).sqrt().plus(1)).atan(),s.precision=i,s.rounding=t,r.times(2)))},O.inverseTangent=O.atan=function(){var n,e,i,t,r,s,o,u,c,f=this,a=f.constructor,h=a.precision,d=a.rounding;if(f.isFinite()){if(f.isZero())return new a(f);if(f.abs().eq(1)&&h+4<=q)return(o=L(a,h+4,d).times(.25)).s=f.s,o}else{if(!f.s)return new a(NaN);if(h+4<=q)return(o=L(a,h+4,d).times(.5)).s=f.s,o}for(a.precision=u=h+10,a.rounding=1,n=i=Math.min(28,u/7+2|0);n;--n)f=f.div(f.times(f).plus(1).sqrt().plus(1));for(l=!1,e=Math.ceil(u/7),t=1,c=f.times(f),o=new a(f),r=f;-1!==n;)if(r=r.times(c),s=o.minus(r.div(t+=2)),r=r.times(c),void 0!==(o=s.plus(r.div(t+=2))).d[e])for(n=e;o.d[n]===s.d[n]&&n--;);return i&&(o=o.times(2<<i-1)),l=!0,P(o,a.precision=h,a.rounding=d,!0)},O.isFinite=function(){return!!this.d},O.isInteger=O.isInt=function(){return!!this.d&&w(this.e/7)>this.d.length-2},O.isNaN=function(){return!this.s},O.isNegative=O.isNeg=function(){return this.s<0},O.isPositive=O.isPos=function(){return this.s>0},O.isZero=function(){return!!this.d&&0===this.d[0]},O.lessThan=O.lt=function(n){return this.cmp(n)<0},O.lessThanOrEqualTo=O.lte=function(n){return this.cmp(n)<1},O.logarithm=O.log=function(n){var e,i,t,r,s,o,u,c,f=this,a=f.constructor,h=a.precision,d=a.rounding;if(null==n)n=new a(10),e=!0;else{if(i=(n=new a(n)).d,n.s<0||!i||!i[0]||n.eq(1))return new a(NaN);e=n.eq(10)}if(i=f.d,f.s<0||!i||!i[0]||f.eq(1))return new a(i&&!i[0]?-1/0:1!=f.s?NaN:i?0:1/0);if(e)if(i.length>1)s=!0;else{for(r=i[0];r%10==0;)r/=10;s=1!==r}if(l=!1,o=V(f,u=h+5),t=e?_(a,u+10):V(n,u),A((c=Z(o,t,u,1)).d,r=h,d))do{if(o=V(f,u+=10),t=e?_(a,u+10):V(n,u),c=Z(o,t,u,1),!s){+D(c.d).slice(r+1,r+15)+1==1e14&&(c=P(c,h+1,0));break}}while(A(c.d,r+=10,d));return l=!0,P(c,h,d)},O.minus=O.sub=function(n){var e,i,t,r,s,o,u,c,f,a,h,d,p=this,g=p.constructor;if(n=new g(n),!p.d||!n.d)return p.s&&n.s?p.d?n.s=-n.s:n=new g(n.d||p.s!==n.s?p:NaN):n=new g(NaN),n;if(p.s!=n.s)return n.s=-n.s,p.plus(n);if(f=p.d,d=n.d,u=g.precision,c=g.rounding,!f[0]||!d[0]){if(d[0])n.s=-n.s;else{if(!f[0])return new g(3===c?-0:0);n=new g(p)}return l?P(n,u,c):n}if(i=w(n.e/7),a=w(p.e/7),f=f.slice(),s=a-i){for((h=s<0)?(e=f,s=-s,o=d.length):(e=d,i=a,o=f.length),s>(t=Math.max(Math.ceil(u/7),o)+2)&&(s=t,e.length=1),e.reverse(),t=s;t--;)e.push(0);e.reverse()}else{for((h=(t=f.length)<(o=d.length))&&(o=t),t=0;t<o;t++)if(f[t]!=d[t]){h=f[t]<d[t];break}s=0}for(h&&(e=f,f=d,d=e,n.s=-n.s),o=f.length,t=d.length-o;t>0;--t)f[o++]=0;for(t=d.length;t>s;){if(f[--t]<d[t]){for(r=t;r&&0===f[--r];)f[r]=y-1;--f[r],f[t]+=y}f[t]-=d[t]}for(;0===f[--o];)f.pop();for(;0===f[0];f.shift())--i;return f[0]?(n.d=f,n.e=T(f,i),l?P(n,u,c):n):new g(3===c?-0:0)},O.modulo=O.mod=function(n){var e,i=this,t=i.constructor;return n=new t(n),!i.d||!n.s||n.d&&!n.d[0]?new t(NaN):!n.d||i.d&&!i.d[0]?P(new t(i),t.precision,t.rounding):(l=!1,9==t.modulo?(e=Z(i,n.abs(),0,3,1)).s*=n.s:e=Z(i,n,0,t.modulo,1),e=e.times(n),l=!0,i.minus(e))},O.naturalExponential=O.exp=function(){return B(this)},O.naturalLogarithm=O.ln=function(){return V(this)},O.negated=O.neg=function(){var n=new this.constructor(this);return n.s=-n.s,P(n)},O.plus=O.add=function(n){var e,i,t,r,s,o,u,c,f,a,h=this,d=h.constructor;if(n=new d(n),!h.d||!n.d)return h.s&&n.s?h.d||(n=new d(n.d||h.s===n.s?h:NaN)):n=new d(NaN),n;if(h.s!=n.s)return n.s=-n.s,h.minus(n);if(f=h.d,a=n.d,u=d.precision,c=d.rounding,!f[0]||!a[0])return a[0]||(n=new d(h)),l?P(n,u,c):n;if(s=w(h.e/7),t=w(n.e/7),f=f.slice(),r=s-t){for(r<0?(i=f,r=-r,o=a.length):(i=a,t=s,o=f.length),r>(o=(s=Math.ceil(u/7))>o?s+1:o+1)&&(r=o,i.length=1),i.reverse();r--;)i.push(0);i.reverse()}for((o=f.length)-(r=a.length)<0&&(r=o,i=a,a=f,f=i),e=0;r;)e=(f[--r]=f[r]+a[r]+e)/y|0,f[r]%=y;for(e&&(f.unshift(e),++t),o=f.length;0==f[--o];)f.pop();return n.d=f,n.e=T(f,t),l?P(n,u,c):n},O.precision=O.sd=function(n){var e,i=this;if(void 0!==n&&n!==!!n&&1!==n&&0!==n)throw Error(d+n);return i.d?(e=U(i.d),n&&i.e+1>e&&(e=i.e+1)):e=NaN,e},O.round=function(){var n=this,e=n.constructor;return P(new e(n),n.e+1,e.rounding)},O.sine=O.sin=function(){var n,e,i=this,t=i.constructor;return i.isFinite()?i.isZero()?new t(i):(n=t.precision,e=t.rounding,t.precision=n+Math.max(i.e,i.sd())+7,t.rounding=1,i=function(n,e){var i,t=e.d.length;if(t<3)return e.isZero()?e:J(n,2,e,e);i=(i=1.4*Math.sqrt(t))>16?16:0|i,e=e.times(1/z(5,i)),e=J(n,2,e,e);for(var r,s=new n(5),o=new n(16),u=new n(20);i--;)r=e.times(e),e=e.times(s.plus(r.times(o.times(r).minus(u))));return e}(t,G(t,i)),t.precision=n,t.rounding=e,P(r>2?i.neg():i,n,e,!0)):new t(NaN)},O.squareRoot=O.sqrt=function(){var n,e,i,t,r,s,o=this,u=o.d,c=o.e,f=o.s,a=o.constructor;if(1!==f||!u||!u[0])return new a(!f||f<0&&(!u||u[0])?NaN:u?o:1/0);for(l=!1,0==(f=Math.sqrt(+o))||f==1/0?(((e=D(u)).length+c)%2==0&&(e+="0"),f=Math.sqrt(e),c=w((c+1)/2)-(c<0||c%2),t=new a(e=f==1/0?"5e"+c:(e=f.toExponential()).slice(0,e.indexOf("e")+1)+c)):t=new a(f.toString()),i=(c=a.precision)+3;;)if(t=(s=t).plus(Z(o,s,i+2,1)).times(.5),D(s.d).slice(0,i)===(e=D(t.d)).slice(0,i)){if("9999"!=(e=e.slice(i-3,i+1))&&(r||"4999"!=e)){+e&&(+e.slice(1)||"5"!=e.charAt(0))||(P(t,c+1,1),n=!t.times(t).eq(o));break}if(!r&&(P(s,c+1,0),s.times(s).eq(o))){t=s;break}i+=4,r=1}return l=!0,P(t,c,a.rounding,n)},O.tangent=O.tan=function(){var n,e,i=this,t=i.constructor;return i.isFinite()?i.isZero()?new t(i):(n=t.precision,e=t.rounding,t.precision=n+10,t.rounding=1,(i=i.sin()).s=1,i=Z(i,new t(1).minus(i.times(i)).sqrt(),n+10,0),t.precision=n,t.rounding=e,P(2==r||4==r?i.neg():i,n,e,!0)):new t(NaN)},O.times=O.mul=function(n){var e,i,t,r,s,o,u,c,f,a=this,h=a.constructor,d=a.d,p=(n=new h(n)).d;if(n.s*=a.s,!(d&&d[0]&&p&&p[0]))return new h(!n.s||d&&!d[0]&&!p||p&&!p[0]&&!d?NaN:d&&p?0*n.s:n.s/0);for(i=w(a.e/7)+w(n.e/7),(c=d.length)<(f=p.length)&&(s=d,d=p,p=s,o=c,c=f,f=o),s=[],t=o=c+f;t--;)s.push(0);for(t=f;--t>=0;){for(e=0,r=c+t;r>t;)u=s[r]+p[t]*d[r-t-1]+e,s[r--]=u%y|0,e=u/y|0;s[r]=(s[r]+e)%y|0}for(;!s[--o];)s.pop();return e?++i:s.shift(),n.d=s,n.e=T(s,i),l?P(n,h.precision,h.rounding):n},O.toBinary=function(n,e){return K(this,2,n,e)},O.toDecimalPlaces=O.toDP=function(n,e){var i=this,t=i.constructor;return i=new t(i),void 0===n?i:(F(n,0,o),void 0===e?e=t.rounding:F(e,0,8),P(i,n+i.e+1,e))},O.toExponential=function(n,e){var i,t=this,r=t.constructor;return void 0===n?i=R(t,!0):(F(n,0,o),void 0===e?e=r.rounding:F(e,0,8),i=R(t=P(new r(t),n+1,e),!0,n+1)),t.isNeg()&&!t.isZero()?"-"+i:i},O.toFixed=function(n,e){var i,t,r=this,s=r.constructor;return void 0===n?i=R(r):(F(n,0,o),void 0===e?e=s.rounding:F(e,0,8),i=R(t=P(new s(r),n+r.e+1,e),!1,n+t.e+1)),r.isNeg()&&!r.isZero()?"-"+i:i},O.toFraction=function(n){var e,i,t,r,s,o,u,c,f,a,h,p,g=this,m=g.d,w=g.constructor;if(!m)return new w(g);if(f=i=new w(1),t=c=new w(0),o=(s=(e=new w(t)).e=U(m)-g.e-1)%7,e.d[0]=v(10,o<0?7+o:o),null==n)n=s>0?e:f;else{if(!(u=new w(n)).isInt()||u.lt(f))throw Error(d+u);n=u.gt(e)?s>0?e:f:u}for(l=!1,u=new w(D(m)),a=w.precision,w.precision=s=7*m.length*2;h=Z(u,e,0,1,1),1!=(r=i.plus(h.times(t))).cmp(n);)i=t,t=r,r=f,f=c.plus(h.times(r)),c=r,r=e,e=u.minus(h.times(r)),u=r;return r=Z(n.minus(i),t,0,1,1),c=c.plus(r.times(f)),i=i.plus(r.times(t)),c.s=f.s=g.s,p=Z(f,t,s,1).minus(g).abs().cmp(Z(c,i,s,1).minus(g).abs())<1?[f,t]:[c,i],w.precision=a,l=!0,p},O.toHexadecimal=O.toHex=function(n,e){return K(this,16,n,e)},O.toNearest=function(n,e){var i=this,t=i.constructor;if(i=new t(i),null==n){if(!i.d)return i;n=new t(1),e=t.rounding}else{if(n=new t(n),void 0===e?e=t.rounding:F(e,0,8),!i.d)return n.s?i:n;if(!n.d)return n.s&&(n.s=i.s),n}return n.d[0]?(l=!1,i=Z(i,n,0,e,1).times(n),l=!0,P(i)):(n.s=i.s,i=n),i},O.toNumber=function(){return+this},O.toOctal=function(n,e){return K(this,8,n,e)},O.toPower=O.pow=function(n){var e,i,t,r,s,o,u=this,c=u.constructor,f=+(n=new c(n));if(!(u.d&&n.d&&u.d[0]&&n.d[0]))return new c(v(+u,f));if((u=new c(u)).eq(1))return u;if(t=c.precision,s=c.rounding,n.eq(1))return P(u,t,s);if((e=w(n.e/7))>=n.d.length-1&&(i=f<0?-f:f)<=9007199254740991)return r=C(c,u,i,t),n.s<0?new c(1).div(r):P(r,t,s);if((o=u.s)<0){if(e<n.d.length-1)return new c(NaN);if(1&n.d[e]||(o=1),0==u.e&&1==u.d[0]&&1==u.d.length)return u.s=o,u}return(e=0!=(i=v(+u,f))&&isFinite(i)?new c(i+"").e:w(f*(Math.log("0."+D(u.d))/Math.LN10+u.e+1)))>c.maxE+1||e<c.minE-1?new c(e>0?o/0:0):(l=!1,c.rounding=u.s=1,i=Math.min(12,(e+"").length),(r=B(n.times(V(u,t+i)),t)).d&&A((r=P(r,t+5,1)).d,t,s)&&(e=t+10,+D((r=P(B(n.times(V(u,e+i)),e),e+5,1)).d).slice(t+1,t+15)+1==1e14&&(r=P(r,t+1,0))),r.s=o,l=!0,c.rounding=s,P(r,t,s))},O.toPrecision=function(n,e){var i,t=this,r=t.constructor;return void 0===n?i=R(t,t.e<=r.toExpNeg||t.e>=r.toExpPos):(F(n,1,o),void 0===e?e=r.rounding:F(e,0,8),i=R(t=P(new r(t),n,e),n<=t.e||t.e<=r.toExpNeg,n)),t.isNeg()&&!t.isZero()?"-"+i:i},O.toSignificantDigits=O.toSD=function(n,e){var i=this.constructor;return void 0===n?(n=i.precision,e=i.rounding):(F(n,1,o),void 0===e?e=i.rounding:F(e,0,8)),P(new i(this),n,e)},O.toString=function(){var n=this,e=n.constructor,i=R(n,n.e<=e.toExpNeg||n.e>=e.toExpPos);return n.isNeg()&&!n.isZero()?"-"+i:i},O.truncated=O.trunc=function(){return P(new this.constructor(this),this.e+1,1)},O.valueOf=O.toJSON=function(){var n=this,e=n.constructor,i=R(n,n.e<=e.toExpNeg||n.e>=e.toExpPos);return n.isNeg()?"-"+i:i};var Z=function(){function n(n,e,i){var t,r=0,s=n.length;for(n=n.slice();s--;)t=n[s]*e+r,n[s]=t%i|0,r=t/i|0;return r&&n.unshift(r),n}function e(n,e,i,t){var r,s;if(i!=t)s=i>t?1:-1;else for(r=s=0;r<i;r++)if(n[r]!=e[r]){s=n[r]>e[r]?1:-1;break}return s}function t(n,e,i,t){for(var r=0;i--;)n[i]-=r,r=n[i]<e[i]?1:0,n[i]=r*t+n[i]-e[i];for(;!n[0]&&n.length>1;)n.shift()}return function(r,s,o,u,c,f){var a,l,h,d,p,g,m,v,N,b,E,x,M,q,O,D,F,A,S,Z,R=r.constructor,T=r.s==s.s?1:-1,_=r.d,L=s.d;if(!(_&&_[0]&&L&&L[0]))return new R(r.s&&s.s&&(_?!L||_[0]!=L[0]:L)?_&&0==_[0]||!L?0*T:T/0:NaN);for(f?(p=1,l=r.e-s.e):(f=y,p=7,l=w(r.e/p)-w(s.e/p)),S=L.length,F=_.length,b=(N=new R(T)).d=[],h=0;L[h]==(_[h]||0);h++);if(L[h]>(_[h]||0)&&l--,null==o?(q=o=R.precision,u=R.rounding):q=c?o+(r.e-s.e)+1:o,q<0)b.push(1),g=!0;else{if(q=q/p+2|0,h=0,1==S){for(d=0,L=L[0],q++;(h<F||d)&&q--;h++)O=d*f+(_[h]||0),b[h]=O/L|0,d=O%L|0;g=d||h<F}else{for((d=f/(L[0]+1)|0)>1&&(L=n(L,d,f),_=n(_,d,f),S=L.length,F=_.length),D=S,x=(E=_.slice(0,S)).length;x<S;)E[x++]=0;(Z=L.slice()).unshift(0),A=L[0],L[1]>=f/2&&++A;do{d=0,(a=e(L,E,S,x))<0?(M=E[0],S!=x&&(M=M*f+(E[1]||0)),(d=M/A|0)>1?(d>=f&&(d=f-1),1==(a=e(m=n(L,d,f),E,v=m.length,x=E.length))&&(d--,t(m,S<v?Z:L,v,f))):(0==d&&(a=d=1),m=L.slice()),(v=m.length)<x&&m.unshift(0),t(E,m,x,f),-1==a&&(a=e(L,E,S,x=E.length))<1&&(d++,t(E,S<x?Z:L,x,f)),x=E.length):0===a&&(d++,E=[0]),b[h++]=d,a&&E[0]?E[x++]=_[D]||0:(E=[_[D]],x=1)}while((D++<F||void 0!==E[0])&&q--);g=void 0!==E[0]}b[0]||b.shift()}if(1==p)N.e=l,i=g;else{for(h=1,d=b[0];d>=10;d/=10)h++;N.e=h+l*p-1,P(N,c?o+N.e+1:o,u,g)}return N}}();function P(n,e,i,t){var r,s,o,u,c,f,a,h,d,p=n.constructor;n:if(null!=e){if(!(h=n.d))return n;for(r=1,u=h[0];u>=10;u/=10)r++;if((s=e-r)<0)s+=7,o=e,c=(a=h[d=0])/v(10,r-o-1)%10|0;else if((d=Math.ceil((s+1)/7))>=(u=h.length)){if(!t)break n;for(;u++<=d;)h.push(0);a=c=0,r=1,o=(s%=7)-7+1}else{for(a=u=h[d],r=1;u>=10;u/=10)r++;c=(o=(s%=7)-7+r)<0?0:a/v(10,r-o-1)%10|0}if(t=t||e<0||void 0!==h[d+1]||(o<0?a:a%v(10,r-o-1)),f=i<4?(c||t)&&(0==i||i==(n.s<0?3:2)):c>5||5==c&&(4==i||t||6==i&&(s>0?o>0?a/v(10,r-o):0:h[d-1])%10&1||i==(n.s<0?8:7)),e<1||!h[0])return h.length=0,f?(e-=n.e+1,h[0]=v(10,(7-e%7)%7),n.e=-e||0):h[0]=n.e=0,n;if(0==s?(h.length=d,u=1,d--):(h.length=d+1,u=v(10,7-s),h[d]=o>0?(a/v(10,r-o)%v(10,o)|0)*u:0),f)for(;;){if(0==d){for(s=1,o=h[0];o>=10;o/=10)s++;for(o=h[0]+=u,u=1;o>=10;o/=10)u++;s!=u&&(n.e++,h[0]==y&&(h[0]=1));break}if(h[d]+=u,h[d]!=y)break;h[d--]=0,u=1}for(s=h.length;0===h[--s];)h.pop()}return l&&(n.e>p.maxE?(n.d=null,n.e=NaN):n.e<p.minE&&(n.e=0,n.d=[0])),n}function R(n,e,i){if(!n.isFinite())return $(n);var t,r=n.e,s=D(n.d),o=s.length;return e?(i&&(t=i-o)>0?s=s.charAt(0)+"."+s.slice(1)+k(t):o>1&&(s=s.charAt(0)+"."+s.slice(1)),s=s+(n.e<0?"e":"e+")+n.e):r<0?(s="0."+k(-r-1)+s,i&&(t=i-o)>0&&(s+=k(t))):r>=o?(s+=k(r+1-o),i&&(t=i-r-1)>0&&(s=s+"."+k(t))):((t=r+1)<o&&(s=s.slice(0,t)+"."+s.slice(t)),i&&(t=i-o)>0&&(r+1===o&&(s+="."),s+=k(t))),s}function T(n,e){var i=n[0];for(e*=7;i>=10;i/=10)e++;return e}function _(n,e,i){if(e>M)throw l=!0,i&&(n.precision=i),Error(p);return P(new n(c),e,1,!0)}function L(n,e,i){if(e>q)throw Error(p);return P(new n(f),e,i,!0)}function U(n){var e=n.length-1,i=7*e+1;if(e=n[e]){for(;e%10==0;e/=10)i--;for(e=n[0];e>=10;e/=10)i++}return i}function k(n){for(var e="";n--;)e+="0";return e}function C(n,e,i,t){var r,s=new n(1),o=Math.ceil(t/7+4);for(l=!1;;){if(i%2&&Q((s=s.times(e)).d,o)&&(r=!0),0===(i=w(i/2))){i=s.d.length-1,r&&0===s.d[i]&&++s.d[i];break}Q((e=e.times(e)).d,o)}return l=!0,s}function I(n){return 1&n.d[n.d.length-1]}function H(n,e,i){for(var t,r=new n(e[0]),s=0;++s<e.length;){if(!(t=new n(e[s])).s){r=t;break}r[i](t)&&(r=t)}return r}function B(n,e){var i,t,r,s,o,u,c,f=0,a=0,h=0,d=n.constructor,p=d.rounding,g=d.precision;if(!n.d||!n.d[0]||n.e>17)return new d(n.d?n.d[0]?n.s<0?0:1/0:1:n.s?n.s<0?0:n:NaN);for(null==e?(l=!1,c=g):c=e,u=new d(.03125);n.e>-2;)n=n.times(u),h+=5;for(c+=t=Math.log(v(2,h))/Math.LN10*2+5|0,i=s=o=new d(1),d.precision=c;;){if(s=P(s.times(n),c,1),i=i.times(++a),D((u=o.plus(Z(s,i,c,1))).d).slice(0,c)===D(o.d).slice(0,c)){for(r=h;r--;)o=P(o.times(o),c,1);if(null!=e)return d.precision=g,o;if(!(f<3&&A(o.d,c-t,p,f)))return P(o,d.precision=g,p,l=!0);d.precision=c+=10,i=s=u=new d(1),a=0,f++}o=u}}function V(n,e){var i,t,r,s,o,u,c,f,a,h,d,p=1,g=n,m=g.d,w=g.constructor,v=w.rounding,N=w.precision;if(g.s<0||!m||!m[0]||!g.e&&1==m[0]&&1==m.length)return new w(m&&!m[0]?-1/0:1!=g.s?NaN:m?0:g);if(null==e?(l=!1,a=N):a=e,w.precision=a+=10,t=(i=D(m)).charAt(0),!(Math.abs(s=g.e)<15e14))return f=_(w,a+2,N).times(s+""),g=V(new w(t+"."+i.slice(1)),a-10).plus(f),w.precision=N,null==e?P(g,N,v,l=!0):g;for(;t<7&&1!=t||1==t&&i.charAt(1)>3;)t=(i=D((g=g.times(n)).d)).charAt(0),p++;for(s=g.e,t>1?(g=new w("0."+i),s++):g=new w(t+"."+i.slice(1)),h=g,c=o=g=Z(g.minus(1),g.plus(1),a,1),d=P(g.times(g),a,1),r=3;;){if(o=P(o.times(d),a,1),D((f=c.plus(Z(o,new w(r),a,1))).d).slice(0,a)===D(c.d).slice(0,a)){if(c=c.times(2),0!==s&&(c=c.plus(_(w,a+2,N).times(s+""))),c=Z(c,new w(p),a,1),null!=e)return w.precision=N,c;if(!A(c.d,a-10,v,u))return P(c,w.precision=N,v,l=!0);w.precision=a+=10,f=o=g=Z(h.minus(1),h.plus(1),a,1),d=P(g.times(g),a,1),r=u=1}c=f,r+=2}}function $(n){return String(n.s*n.s/0)}function j(n,e){var i,t,r;for((i=e.indexOf("."))>-1&&(e=e.replace(".","")),(t=e.search(/e/i))>0?(i<0&&(i=t),i+=+e.slice(t+1),e=e.substring(0,t)):i<0&&(i=e.length),t=0;48===e.charCodeAt(t);t++);for(r=e.length;48===e.charCodeAt(r-1);--r);if(e=e.slice(t,r)){if(r-=t,n.e=i=i-t-1,n.d=[],t=(i+1)%7,i<0&&(t+=7),t<r){for(t&&n.d.push(+e.slice(0,t)),r-=7;t<r;)n.d.push(+e.slice(t,t+=7));t=7-(e=e.slice(t)).length}else t-=r;for(;t--;)e+="0";n.d.push(+e),l&&(n.e>n.constructor.maxE?(n.d=null,n.e=NaN):n.e<n.constructor.minE&&(n.e=0,n.d=[0]))}else n.e=0,n.d=[0];return n}function W(n,i){var t,r,s,o,u,c,f,a,h;if(i.indexOf("_")>-1){if(i=i.replace(/(\d)_(?=\d)/g,"$1"),x.test(i))return j(n,i)}else if("Infinity"===i||"NaN"===i)return+i||(n.s=NaN),n.e=NaN,n.d=null,n;if(b.test(i))t=16,i=i.toLowerCase();else if(N.test(i))t=2;else{if(!E.test(i))throw Error(d+i);t=8}for((o=i.search(/p/i))>0?(f=+i.slice(o+1),i=i.substring(2,o)):i=i.slice(2),u=(o=i.indexOf("."))>=0,r=n.constructor,u&&(o=(c=(i=i.replace(".","")).length)-o,s=C(r,new r(t),o,2*o)),o=h=(a=S(i,t,y)).length-1;0===a[o];--o)a.pop();return o<0?new r(0*n.s):(n.e=T(a,h),n.d=a,l=!1,u&&(n=Z(n,s,4*c)),f&&(n=n.times(Math.abs(f)<54?v(2,f):e.pow(2,f))),l=!0,n)}function J(n,e,i,t,r){var s,o,u,c,f=n.precision,a=Math.ceil(f/7);for(l=!1,c=i.times(i),u=new n(t);;){if(o=Z(u.times(c),new n(e++*e++),f,1),u=r?t.plus(o):t.minus(o),t=Z(o.times(c),new n(e++*e++),f,1),void 0!==(o=u.plus(t)).d[a]){for(s=a;o.d[s]===u.d[s]&&s--;);if(-1==s)break}s=u,u=t,t=o,o=s}return l=!0,o.d.length=a+1,o}function z(n,e){for(var i=n;--e;)i*=n;return i}function G(n,e){var i,t=e.s<0,s=L(n,n.precision,1),o=s.times(.5);if((e=e.abs()).lte(o))return r=t?4:1,e;if((i=e.divToInt(s)).isZero())r=t?3:2;else{if((e=e.minus(i.times(s))).lte(o))return r=I(i)?t?2:3:t?4:1,e;r=I(i)?t?1:4:t?3:2}return e.minus(s).abs()}function K(n,e,t,r){var s,c,f,a,l,h,d,p,g,m=n.constructor,w=void 0!==t;if(w?(F(t,1,o),void 0===r?r=m.rounding:F(r,0,8)):(t=m.precision,r=m.rounding),n.isFinite()){for(w?(s=2,16==e?t=4*t-3:8==e&&(t=3*t-2)):s=e,(f=(d=R(n)).indexOf("."))>=0&&(d=d.replace(".",""),(g=new m(1)).e=d.length-f,g.d=S(R(g),10,s),g.e=g.d.length),c=l=(p=S(d,10,s)).length;0==p[--l];)p.pop();if(p[0]){if(f<0?c--:((n=new m(n)).d=p,n.e=c,p=(n=Z(n,g,t,r,0,s)).d,c=n.e,h=i),f=p[t],a=s/2,h=h||void 0!==p[t+1],h=r<4?(void 0!==f||h)&&(0===r||r===(n.s<0?3:2)):f>a||f===a&&(4===r||h||6===r&&1&p[t-1]||r===(n.s<0?8:7)),p.length=t,h)for(;++p[--t]>s-1;)p[t]=0,t||(++c,p.unshift(1));for(l=p.length;!p[l-1];--l);for(f=0,d="";f<l;f++)d+=u.charAt(p[f]);if(w){if(l>1)if(16==e||8==e){for(f=16==e?4:3,--l;l%f;l++)d+="0";for(l=(p=S(d,s,e)).length;!p[l-1];--l);for(f=1,d="1.";f<l;f++)d+=u.charAt(p[f])}else d=d.charAt(0)+"."+d.slice(1);d=d+(c<0?"p":"p+")+c}else if(c<0){for(;++c;)d="0"+d;d="0."+d}else if(++c>l)for(c-=l;c--;)d+="0";else c<l&&(d=d.slice(0,c)+"."+d.slice(c))}else d=w?"0p+0":"0";d=(16==e?"0x":2==e?"0b":8==e?"0o":"")+d}else d=$(n);return n.s<0?"-"+d:d}function Q(n,e){if(n.length>e)return n.length=e,!0}function X(n){return new this(n).abs()}function Y(n){return new this(n).acos()}function nn(n){return new this(n).acosh()}function en(n,e){return new this(n).plus(e)}function tn(n){return new this(n).asin()}function rn(n){return new this(n).asinh()}function sn(n){return new this(n).atan()}function on(n){return new this(n).atanh()}function un(n,e){n=new this(n),e=new this(e);var i,t=this.precision,r=this.rounding,s=t+4;return n.s&&e.s?n.d||e.d?!e.d||n.isZero()?(i=e.s<0?L(this,t,r):new this(0)).s=n.s:!n.d||e.isZero()?(i=L(this,s,1).times(.5)).s=n.s:e.s<0?(this.precision=s,this.rounding=1,i=this.atan(Z(n,e,s,1)),e=L(this,s,1),this.precision=t,this.rounding=r,i=n.s<0?i.minus(e):i.plus(e)):i=this.atan(Z(n,e,s,1)):(i=L(this,s,1).times(e.s>0?.25:.75)).s=n.s:i=new this(NaN),i}function cn(n){return new this(n).cbrt()}function fn(n){return P(n=new this(n),n.e+1,2)}function an(n,e,i){return new this(n).clamp(e,i)}function ln(n){if(!n||"object"!=typeof n)throw Error(h+"Object expected");var e,i,t,r=!0===n.defaults,u=["precision",1,o,"rounding",0,8,"toExpNeg",-s,0,"toExpPos",0,s,"maxE",0,s,"minE",-s,0,"modulo",0,9];for(e=0;e<u.length;e+=3)if(i=u[e],r&&(this[i]=a[i]),void 0!==(t=n[i])){if(!(w(t)===t&&t>=u[e+1]&&t<=u[e+2]))throw Error(d+i+": "+t);this[i]=t}if(i="crypto",r&&(this[i]=a[i]),void 0!==(t=n[i])){if(!0!==t&&!1!==t&&0!==t&&1!==t)throw Error(d+i+": "+t);if(t){if("undefined"==typeof crypto||!crypto||!crypto.getRandomValues&&!crypto.randomBytes)throw Error(g);this[i]=!0}else this[i]=!1}return this}function hn(n){return new this(n).cos()}function dn(n){return new this(n).cosh()}function pn(n,e){return new this(n).div(e)}function gn(n){return new this(n).exp()}function mn(n){return P(n=new this(n),n.e+1,3)}function wn(){var n,e,i=new this(0);for(l=!1,n=0;n<arguments.length;)if((e=new this(arguments[n++])).d)i.d&&(i=i.plus(e.times(e)));else{if(e.s)return l=!0,new this(1/0);i=e}return l=!0,i.sqrt()}function vn(n){return n instanceof e||n&&n.toStringTag===m||!1}function Nn(n){return new this(n).ln()}function bn(n,e){return new this(n).log(e)}function En(n){return new this(n).log(2)}function xn(n){return new this(n).log(10)}function yn(){return H(this,arguments,"lt")}function Mn(){return H(this,arguments,"gt")}function qn(n,e){return new this(n).mod(e)}function On(n,e){return new this(n).mul(e)}function Dn(n,e){return new this(n).pow(e)}function Fn(n){var e,i,t,r,s=0,u=new this(1),c=[];if(void 0===n?n=this.precision:F(n,1,o),t=Math.ceil(n/7),this.crypto)if(crypto.getRandomValues)for(e=crypto.getRandomValues(new Uint32Array(t));s<t;)(r=e[s])>=429e7?e[s]=crypto.getRandomValues(new Uint32Array(1))[0]:c[s++]=r%1e7;else{if(!crypto.randomBytes)throw Error(g);for(e=crypto.randomBytes(t*=4);s<t;)(r=e[s]+(e[s+1]<<8)+(e[s+2]<<16)+((127&e[s+3])<<24))>=214e7?crypto.randomBytes(4).copy(e,s):(c.push(r%1e7),s+=4);s=t/4}else for(;s<t;)c[s++]=1e7*Math.random()|0;for(n%=7,(t=c[--s])&&n&&(r=v(10,7-n),c[s]=(t/r|0)*r);0===c[s];s--)c.pop();if(s<0)i=0,c=[0];else{for(i=-1;0===c[0];i-=7)c.shift();for(t=1,r=c[0];r>=10;r/=10)t++;t<7&&(i-=7-t)}return u.e=i,u.d=c,u}function An(n){return P(n=new this(n),n.e+1,this.rounding)}function Sn(n){return(n=new this(n)).d?n.d[0]?n.s:0*n.s:n.s||NaN}function Zn(n){return new this(n).sin()}function Pn(n){return new this(n).sinh()}function Rn(n){return new this(n).sqrt()}function Tn(n,e){return new this(n).sub(e)}function _n(){var n=0,e=arguments,i=new this(e[n]);for(l=!1;i.s&&++n<e.length;)i=i.plus(e[n]);return l=!0,P(i,this.precision,this.rounding)}function Ln(n){return new this(n).tan()}function Un(n){return new this(n).tanh()}function kn(n){return P(n=new this(n),n.e+1,1)}e=function n(e){var i,t,r;function s(n){var e,i,t,r=this;if(!(r instanceof s))return new s(n);if(r.constructor=s,vn(n))return r.s=n.s,void(l?!n.d||n.e>s.maxE?(r.e=NaN,r.d=null):n.e<s.minE?(r.e=0,r.d=[0]):(r.e=n.e,r.d=n.d.slice()):(r.e=n.e,r.d=n.d?n.d.slice():n.d));if("number"===(t=typeof n)){if(0===n)return r.s=1/n<0?-1:1,r.e=0,void(r.d=[0]);if(n<0?(n=-n,r.s=-1):r.s=1,n===~~n&&n<1e7){for(e=0,i=n;i>=10;i/=10)e++;return void(l?e>s.maxE?(r.e=NaN,r.d=null):e<s.minE?(r.e=0,r.d=[0]):(r.e=e,r.d=[n]):(r.e=e,r.d=[n]))}return 0*n!=0?(n||(r.s=NaN),r.e=NaN,void(r.d=null)):j(r,n.toString())}if("string"!==t)throw Error(d+n);return 45===(i=n.charCodeAt(0))?(n=n.slice(1),r.s=-1):(43===i&&(n=n.slice(1)),r.s=1),x.test(n)?j(r,n):W(r,n)}if(s.prototype=O,s.ROUND_UP=0,s.ROUND_DOWN=1,s.ROUND_CEIL=2,s.ROUND_FLOOR=3,s.ROUND_HALF_UP=4,s.ROUND_HALF_DOWN=5,s.ROUND_HALF_EVEN=6,s.ROUND_HALF_CEIL=7,s.ROUND_HALF_FLOOR=8,s.EUCLID=9,s.config=s.set=ln,s.clone=n,s.isDecimal=vn,s.abs=X,s.acos=Y,s.acosh=nn,s.add=en,s.asin=tn,s.asinh=rn,s.atan=sn,s.atanh=on,s.atan2=un,s.cbrt=cn,s.ceil=fn,s.clamp=an,s.cos=hn,s.cosh=dn,s.div=pn,s.exp=gn,s.floor=mn,s.hypot=wn,s.ln=Nn,s.log=bn,s.log10=xn,s.log2=En,s.max=yn,s.min=Mn,s.mod=qn,s.mul=On,s.pow=Dn,s.random=Fn,s.round=An,s.sign=Sn,s.sin=Zn,s.sinh=Pn,s.sqrt=Rn,s.sub=Tn,s.sum=_n,s.tan=Ln,s.tanh=Un,s.trunc=kn,void 0===e&&(e={}),e&&!0!==e.defaults)for(r=["precision","rounding","toExpNeg","toExpPos","maxE","minE","modulo","crypto"],i=0;i<r.length;)e.hasOwnProperty(t=r[i++])||(e[t]=this[t]);return s.config(e),s}(a),e.prototype.constructor=e,e.default=e.Decimal=e,c=new e(c),f=new e(f),"function"==typeof define&&define.amd?define(function(){return e}):"undefined"!=typeof module&&module.exports?("function"==typeof Symbol&&"symbol"==typeof Symbol.iterator&&(O[Symbol.for("nodejs.util.inspect.custom")]=O.toString,O[Symbol.toStringTag]="Decimal"),module.exports=e):(n||(n="undefined"!=typeof self&&self&&self.self==self?self:window),t=n.Decimal,e.noConflict=function(){return n.Decimal=t,e},n.Decimal=e)}(this);</script>
+<script>
+/* ENGINE-START
+   Pure math + save codec. No DOM. Needs a global `Decimal` (decimal.js).
+   Ported from graceoflives' Ancient Calculator (v1.0e10 rules, Mar 2018, "no limit" build). */
+var Engine = (function () {
+  'use strict';
+
+  Decimal.config({ precision: 13 });
+  var D = function (v) { return new Decimal(v); };
+
+  /* ---------- static tables ---------- */
+
+  // [id, name, cost rule]  n = n, p2 = 2^n, n15 = n^1.5, flat = 1 per level
+  var ANCIENTS = [
+    [4, 'Libertas', 'n'], [5, 'Siyalatas', 'n'], [8, 'Mammon', 'n'], [9, 'Mimzee', 'n'],
+    [10, 'Pluto', 'n'], [11, 'Dogcog', 'p2'], [12, 'Fortuna', 'p2'], [13, 'Atman', 'p2'],
+    [14, 'Dora', 'p2'], [15, 'Bhaal', 'n'], [16, 'Morgulis', 'flat'], [17, 'Chronos', 'p2'],
+    [18, 'Bubos', 'p2'], [19, 'Fragsworth', 'n'], [20, 'Vaagur', 'p2'], [21, 'Kumawakamaru', 'p2'],
+    [22, 'Chawedo', 'p2'], [23, 'Hecatoncheir', 'p2'], [24, 'Berserker', 'p2'], [25, 'Sniperino', 'p2'],
+    [26, 'Kleptos', 'p2'], [27, 'Energon', 'p2'], [28, 'Argaiv', 'n'], [29, 'Juggernaut', 'n15'],
+    [31, 'Revolc', 'p2'], [32, 'Nogardnit', 'n15']
+  ].map(function (a) { return { id: a[0], name: a[1], rule: a[2] }; });
+
+  var OTHER_IDS = [20, 22, 23, 24, 25, 26, 27, 31];       // Vaagur, Revolc and the skill ancients
+  var IDLE_ONLY = [4, 5, 32];
+  var ACTIVE_ONLY = [10, 15, 19, 29];
+
+  // Ancients you can base "other" ancients on (id -> label)
+  var BASE_CHOICES = [[13, 'Atman'], [18, 'Bubos'], [17, 'Chronos'], [11, 'Dogcog'], [14, 'Dora'], [12, 'Fortuna'], [21, 'Kumawakamaru']];
+
+  // Outsiders as they appear in the save (id 4 is a retired entry)
+  var OUTSIDERS = [
+    { id: 1, name: 'Xyliqil' }, { id: 2, name: "Chor'gorloth" }, { id: 3, name: 'Phandoryss' },
+    { id: 5, name: 'Ponyboy' }, { id: 6, name: 'Borb' }, { id: 7, name: 'Rhageist' },
+    { id: 8, name: "K'Ariqua" }, { id: 9, name: 'Orphalas' }, { id: 10, name: 'Sen-Akhan' }
+  ];
+
+  /* ---------- number formatting ---------- */
+
+  function sci(num, dp) {
+    if (dp === undefined) dp = 4;
+    if (num.gte(100000)) return num.toExponential(dp).replace('+', '');
+    return num.toFixed(0);
+  }
+
+  // "123400" -> "1234e2": short enough to paste into the game's number boxes
+  function easyCopy(num) {
+    if (num.lt(100000)) return num.toFixed(0);
+    var m = /^(\d)(?:\.(\d+))?e\+?(\d+)$/.exec(num.toExponential());
+    var digits = m[1] + (m[2] || '');
+    var exp = parseInt(m[3], 10) - (digits.length - 1);
+    return exp === 0 ? digits : digits + 'e' + exp;
+  }
+
+  /* ---------- helpers from the original ---------- */
+
+  // closed-form approximation of sum(k^1.5, k=1..n)
+  function approSum(n) {
+    var m = n.plus(1);
+    var l1 = m.sqrt();
+    var l2 = m.times(l1);
+    var l3 = m.times(l2).times(0.4);
+    var l4 = l2.times(0.5);
+    var l5 = l1.times(0.125);
+    var l6 = D(0.00052).div(l2);
+    return l3.minus(l4).plus(l5).minus(l6).ceil();
+  }
+
+  function transcendentPower(data) {
+    var as = D(data.ancientSoulsTotal);
+    return D(25).minus(D(23).times(as.times(-0.0003).exp())).div(100);
+  }
+
+  // Levels of the "NUA" ancients: first level where the ancient's effect covers the damage target
+  function nuaLevel(a, b, c, d, s) {
+    var test = d.div(a);
+    var lo = Decimal.min(c, c + s);
+    var hi = Decimal.max(c, c + s);
+    var k = D(b).plus(Decimal.ln(2));
+    var left = Decimal.floor(Decimal.ln(d.div(a).div(hi)).div(k));
+    var right = Decimal.ceil(Decimal.ln(d.div(a).div(lo)).div(k));
+    if (!left.isFinite()) return D(1);
+    var base = 2 * Math.exp(b);
+    for (var i = left; i.lte(right); i = i.plus(1)) {
+      if (Decimal.pow(base, i).times(Decimal.pow(Math.exp(1), i.times(-b)).times(s).plus(c)).gte(test)) {
+        return Decimal.max(1, i);
+      }
+    }
+    return right;
+  }
+
+  var NUA = {
+    11: function (m) { return nuaLevel(200 * Math.log(2), 0.01, 1 / 9999999999, m.times(0.927).pow(2), 1); },   // Dogcog
+    12: function (m) { return nuaLevel(800 * Math.log(2), 0.0025, 10 / 9, m.times(0.927).pow(2), -1); },        // Fortuna
+    13: function (m, alpha) { return nuaLevel(2 / 0.013 * Math.log(2), 0.013, 4 / 3, m.pow(2).div(alpha), -1); }, // Atman
+    14: function (m) { return nuaLevel(1000 * Math.log(2), 0.002, 100 / 99, m.times(0.927).pow(2), -1); },      // Dora
+    17: function (m) { return nuaLevel(2 / 0.034 * Math.log(2), 0.034, 2, m.pow(2), -1); },                      // Chronos
+    18: function (m) { return nuaLevel(100 * Math.log(2), 0.002, 1, m.pow(2), 1); },                             // Bubos
+    21: function (m, alpha) { return nuaLevel(200 * Math.log(2), 0.0025, 0.25, m.pow(2).div(alpha), 1); }       // Kumawakamaru
+  };
+
+  /* ---------- save codec ---------- */
+
+  var ANTI_CHEAT = 'Fe12NAfA3R6z4k0z';
+  var SALT = 'af0ik392jrmt0nsfdghy0';
+  var CHARS = '1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM';
+  var ZLIB_HEADER = '7a990d405d2c6fb93aa8fbb0ec1a3b23';
+
+  // MD5 of an ASCII string, hex. (The save checksum is md5(base64 + SALT).)
+  var MD5_K = [], MD5_S = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
+  for (var mi = 0; mi < 64; mi++) MD5_K[mi] = Math.floor(Math.abs(Math.sin(mi + 1)) * 4294967296) >>> 0;
+  function md5(str) {
+    var n = str.length;
+    var blocks = ((n + 8) >> 6) + 1;
+    var w = new Array(blocks * 16);
+    for (var i = 0; i < w.length; i++) w[i] = 0;
+    for (i = 0; i < n; i++) w[i >> 2] |= (str.charCodeAt(i) & 255) << ((i % 4) * 8);
+    w[n >> 2] |= 0x80 << ((n % 4) * 8);
+    w[blocks * 16 - 2] = (n * 8) >>> 0;
+    w[blocks * 16 - 1] = Math.floor(n * 8 / 4294967296);
+    var a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+    for (var blk = 0; blk < blocks; blk++) {
+      var A = a0, B = b0, C = c0, Dd = d0;
+      for (i = 0; i < 64; i++) {
+        var F, g;
+        if (i < 16) { F = (B & C) | (~B & Dd); g = i; }
+        else if (i < 32) { F = (Dd & B) | (~Dd & C); g = (5 * i + 1) % 16; }
+        else if (i < 48) { F = B ^ C ^ Dd; g = (3 * i + 5) % 16; }
+        else { F = C ^ (B | ~Dd); g = (7 * i) % 16; }
+        F = (F + A + MD5_K[i] + w[blk * 16 + g]) >>> 0;
+        A = Dd; Dd = C; C = B;
+        var sh = MD5_S[(i >> 4) * 4 + (i % 4)];
+        B = (B + ((F << sh) | (F >>> (32 - sh)))) >>> 0;
+      }
+      a0 = (a0 + A) >>> 0; b0 = (b0 + B) >>> 0; c0 = (c0 + C) >>> 0; d0 = (d0 + Dd) >>> 0;
+    }
+    var out = '';
+    [a0, b0, c0, d0].forEach(function (v) {
+      for (var j = 0; j < 4; j++) out += ('0' + ((v >>> (j * 8)) & 255).toString(16)).slice(-2);
+    });
+    return out;
+  }
+
+  function bytesToBinary(bytes) {
+    var s = '';
+    for (var i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    return s;
+  }
+  function binaryToBytes(s) {
+    var b = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+    return b;
+  }
+  async function pipe(bytes, stream) {
+    if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot read compressed saves (no DecompressionStream).');
+    var res = new Response(new Blob([bytes]).stream().pipeThrough(stream));
+    return new Uint8Array(await res.arrayBuffer());
+  }
+
+  // -> { data, type: 'zlib' | 'base64' }
+  async function decodeSave(input) {
+    var str = String(input).trim();
+    if (!str) throw new Error('empty');
+    if (str.slice(0, 32) === ZLIB_HEADER) {
+      var packed = binaryToBytes(atob(str.slice(32)));
+      var raw = await pipe(packed, new DecompressionStream('deflate'));
+      return { data: JSON.parse(new TextDecoder().decode(raw)), type: 'zlib' };
+    }
+    if (str.indexOf(ANTI_CHEAT) > 0) {
+      var cut = str.split(ANTI_CHEAT)[0];
+      var even = '';
+      for (var i = 0; i < cut.length; i += 2) even += cut.charAt(i);
+      return { data: JSON.parse(atob(even)), type: 'base64' };
+    }
+    return { data: JSON.parse(str), type: 'base64' };
+  }
+
+  async function encodeSave(data, type) {
+    var json = JSON.stringify(data);
+    if (type === 'zlib') {
+      var raw = new TextEncoder().encode(json);
+      var packed = await pipe(raw, new CompressionStream('deflate'));
+      return ZLIB_HEADER + btoa(bytesToBinary(packed));
+    }
+    var b64 = btoa(json);
+    var sprinkled = '';
+    for (var i = 0; i < b64.length; i++) {
+      sprinkled += b64.charAt(i) + CHARS.charAt(Math.floor(Math.random() * (CHARS.length - 1)));
+    }
+    return sprinkled + ANTI_CHEAT + md5(b64 + SALT);
+  }
+
+  function validateSave(data) {
+    if (!data || typeof data !== 'object') throw new Error('shape');
+    if (!data.ancients || !data.ancients.ancients) throw new Error('shape');
+    if (data.heroSouls === undefined) throw new Error('shape');
+    return data;
+  }
+
+  /* ---------- reading a save ---------- */
+
+  function ancientLevels(data) {
+    var lv = {};
+    ANCIENTS.forEach(function (a) {
+      var e = data.ancients.ancients[a.id];
+      lv[a.id] = e ? D(e.level) : D(0);
+    });
+    return lv;
+  }
+
+  function outsiderLevels(data) {
+    var o = {};
+    var src = (data.outsiders && data.outsiders.outsiders) || {};
+    OUTSIDERS.forEach(function (x) { o[x.id] = src[x.id] ? D(src[x.id].level) : D(0); });
+    return o;
+  }
+
+  function outsiderEffects(data) {
+    var lvl = outsiderLevels(data);
+    var pct = function (d) { return d.times(100); };
+    var lin = function (a, x) { return a.times(x / 100); };
+    var mult = {
+      1: D(1.5).pow(lvl[1]),
+      2: D(1).minus(D(0.95).pow(lvl[2])),
+      3: lvl[3],
+      5: lvl[5].pow(2).times(10),
+      6: lin(lvl[6], 10), 7: lin(lvl[7], 25), 8: lin(lvl[8], 50), 9: lin(lvl[9], 75), 10: lin(lvl[10], 100)
+    };
+    var text = {
+      1: '+' + sci(pct(mult[1]), 4) + '% effect of all idle bonuses',
+      2: '−' + pct(mult[2]).toFixed(2) + '% ancient cost',
+      3: '+' + pct(mult[3]).toString() + '% DPS',
+      5: '+' + pct(mult[5]).toString() + '% primal hero souls',
+      6: '+' + pct(mult[6]).toString() + '% effect of Kumawakamaru',
+      7: '+' + pct(mult[7]).toString() + '% effect of Atman',
+      8: '+' + pct(mult[8]).toString() + '% effect of Bubos',
+      9: '+' + pct(mult[9]).toString() + '% effect of Chronos',
+      10: '+' + pct(mult[10]).toString() + '% effect of Dora'
+    };
+    return {
+      list: OUTSIDERS.map(function (x) { return { id: x.id, name: x.name, level: lvl[x.id], effect: text[x.id] }; }),
+      costCut: mult[2]
+    };
+  }
+
+  function autoclickers(data) {
+    return D(data.autoclickers || 0).plus(data.dlcAutoclickers || 0);
+  }
+
+  function savedHeroSouls(data, useNext) {
+    var hs = D(data.heroSouls);
+    if (useNext) hs = hs.plus(D(data.primalSouls || 0)).plus(D(data.totalHeroLevels || 0).div(2000).floor());
+    return hs;
+  }
+
+  // Detect how the player currently plays from their Siyalatas / Fragsworth levels
+  function detectPlaystyle(data) {
+    var lv = ancientLevels(data);
+    var s = lv[5], f = lv[19];
+    if (s.equals(0)) return { playstyle: f.gt(0) ? 'active' : 'idle', ratio: 1 };
+    if (f.equals(0)) return { playstyle: 'idle', ratio: 1 };
+    var r = f.div(s);
+    if (r.lt(0.1)) return { playstyle: 'idle', ratio: 1 };
+    if (r.gt(1000)) return { playstyle: 'active', ratio: 1 };
+    var ratio = r.gte(1) ? r.round() : Decimal.max(0.1, r.times(10).round().div(10));
+    return { playstyle: 'hybrid', ratio: ratio.toNumber() };
+  }
+
+  /* ---------- the optimiser ---------- */
+
+  function isVisible(id, o, hasAC) {
+    if (id === 32 && !hasAC) return false;
+    if (OTHER_IDS.indexOf(id) >= 0) return !!o.other;
+    if (IDLE_ONLY.indexOf(id) >= 0) return o.playstyle !== 'active';
+    if (ACTIVE_ONLY.indexOf(id) >= 0) return o.playstyle !== 'idle';
+    return true;
+  }
+
+  function makeContext(data, o) {
+    var tp = transcendentPower(data);
+    var ascZone = D(o.ascZone);
+    var hpScale = D(1.14).plus(ascZone.div(500).ceil().times(0.005));
+    var alpha = D(o.wep8k ? 1.1085 : 1.4067).times(Decimal.ln(tp.plus(1))).div(Decimal.ln(hpScale));
+    var costCut = D(1).minus(D(0.95).pow(outsiderLevels(data)[2]));
+    var hasAC = autoclickers(data).gt(0);
+    var entry = data.ancientEntrySizes || {};
+    var vis = {};
+    ANCIENTS.forEach(function (a) { vis[a.id] = isVisible(a.id, o, hasAC); });
+    return {
+      o: o, lvl: ancientLevels(data), alpha: alpha, costCut: costCut, vis: vis, entry: entry,
+      ratio: D(o.ratio), lower: D(o.otherLower || 0), tp: tp
+    };
+  }
+
+  // Optimal levels and HS cost if Siyalatas (or Fragsworth when active) is raised by x
+  function compute(ctx, x) {
+    var o = ctx.o, lvl = ctx.lvl, wep = o.wep8k;
+    var k = D(wep ? 0.905 : 0.926);
+    var s, f, m;
+    if (o.playstyle === 'idle') { s = lvl[5].plus(x); f = D(0); m = s; }
+    else if (o.playstyle === 'hybrid') { s = lvl[5].plus(x); f = s.times(ctx.ratio); m = Decimal.max(s, f); }
+    else { s = D(0); f = lvl[19].plus(x); m = f; }
+
+    var baseFn = NUA[o.otherBase] || NUA[17];
+    var otherBase = baseFn(m, ctx.alpha);
+
+    var opt = {};
+    ANCIENTS.forEach(function (a) { opt[a.id] = D(0); });
+
+    ANCIENTS.forEach(function (a) {
+      var id = a.id;
+      if (!(lvl[id].gt(0) && ctx.vis[id])) return;
+      switch (id) {
+        case 4: opt[id] = s.times(k).ceil(); break;
+        case 8: case 9: opt[id] = m.times(k).ceil(); break;
+        case 5: opt[id] = s; break;
+        case 10: opt[id] = f.times(k).ceil(); break;
+        case 11: case 12: case 14: case 17: case 18: opt[id] = NUA[id](m); break;
+        case 13: case 21: opt[id] = NUA[id](m, ctx.alpha); break;
+        case 15: case 19: opt[id] = f; break;
+        case 16: opt[id] = m.pow(2); break;
+        case 28: opt[id] = m; break;
+        case 29: opt[id] = f.pow(0.8).ceil(); break;
+        case 32: opt[id] = s.times(k).pow(0.8).ceil(); break;
+      }
+    });
+    OTHER_IDS.forEach(function (id) {
+      if (!lvl[id].gt(0)) return;
+      var v = Decimal.max(0, otherBase.minus(ctx.lower));
+      if (id === 20) v = Decimal.min(1440, v);
+      if (id === 31) v = Decimal.min(3743, v);
+      opt[id] = v;
+    });
+
+    var total = D(0), cost = {};
+    ANCIENTS.forEach(function (a) {
+      var id = a.id, lo = lvl[id], hi = opt[id], t = D(0);
+      if (hi.gt(lo) && ctx.vis[id] && ctx.entry[id] != 1) {
+        if (a.rule === 'n15') t = approSum(hi).minus(approSum(lo));
+        else if (a.rule === 'n') t = hi.times(hi.plus(1)).div(2).minus(lo.times(lo.plus(1)).div(2));
+        else if (a.rule === 'p2') t = Decimal.pow(2, hi.plus(1)).minus(Decimal.pow(2, lo.plus(1)));
+        else t = hi.minus(lo);
+      }
+      cost[id] = t.times(D(1).minus(ctx.costCut)).ceil();
+      total = total.plus(cost[id]);
+    });
+    return { total: total, opt: opt, cost: cost, s: s, f: f, m: m };
+  }
+
+  // opts: { playstyle, ratio, ascZone, wep8k, other, otherLower, otherBase, hs }
+  function optimize(data, opts) {
+    var o = {
+      playstyle: opts.playstyle, ratio: opts.ratio, ascZone: opts.ascZone, wep8k: !!opts.wep8k,
+      other: !!opts.other, otherLower: opts.otherLower, otherBase: Number(opts.otherBase)
+    };
+    var hs = D(opts.hs);
+    var ctx = makeContext(data, o);
+    var lvl = ctx.lvl;
+    var summoned = ANCIENTS.some(function (a) { return lvl[a.id].gt(0); });
+    if (!summoned) return null;
+
+    var base = o.playstyle === 'active' ? lvl[19] : lvl[5];
+    var oneMinusCut = D(1).minus(ctx.costCut);
+    var left, right;
+    if (compute(ctx, 0).total.gt(hs)) {
+      left = base.neg(); right = D(0);
+    } else {
+      left = D(0);
+      right = hs.div(oneMinusCut).plus(base.times(base.plus(1)).times(2)).sqrt().ceil().minus(base);
+    }
+    var guard = 0;
+    while (right.minus(left).gt(Decimal.max(1, Decimal.max(base, right.plus(base)).times(1e-11))) && guard++ < 4000) {
+      var mid = right.plus(left).div(2).floor();
+      var r = compute(ctx, mid);
+      var spare = lvl[16].equals(0) ? Decimal.max(r.opt[5], r.opt[19]).pow(2) : D(0);
+      if (r.total.plus(spare).lte(hs)) left = mid; else right = mid;
+    }
+    var best = compute(ctx, left);
+
+    var rows = ANCIENTS.map(function (a) {
+      var id = a.id, now = lvl[id], target = best.opt[id];
+      var hidden = null;
+      if (now.equals(0)) hidden = 'not summoned';
+      else if (ctx.entry[id] == 1) hidden = 'minimised';
+      else if (!ctx.vis[id]) hidden = 'unused';
+      return {
+        id: id, name: a.name, rule: a.rule, now: now, target: target,
+        change: Decimal.max(0, target.minus(now)), cost: best.cost[id], hidden: hidden
+      };
+    }).sort(function (a, b) { var x = a.name.toLowerCase(), y = b.name.toLowerCase(); return x < y ? -1 : x > y ? 1 : 0; });
+
+    return { rows: rows, hs: hs, spent: best.total, left: hs.minus(best.total), ctx: ctx };
+  }
+
+  /* ---------- AS, clan raid, auto-level ---------- */
+
+  function soulInfo(data, useNext, more) {
+    more = more || 0;
+    var as = D(data.ancientSoulsTotal);
+    var total = D(data.heroSoulsSacrificed || 0).plus(data.heroSouls);
+    if (useNext) total = total.plus(data.primalSouls || 0);
+    var a = data.ancients.ancients;
+    for (var k in a) total = total.plus(a[k].spentHeroSouls || 0);
+    var gain = Decimal.log10(total).times(5).floor().minus(as);
+    var steps = [];
+    for (var i = 1; i <= 5; i++) {
+      var g = gain.plus(i).plus(more);
+      steps.push({ as: g, need: D(10).pow(as.plus(g).div(5)).minus(total) });
+    }
+    return { as: as, gain: gain, steps: steps, tp: transcendentPower(data) };
+  }
+
+  function raidInfo(data) {
+    var dmg = D(data.titanDamage || 0);
+    var ac = autoclickers(data);
+    var lvl;
+    if (ac.equals(0)) lvl = Decimal.log10(dmg).plus(Decimal.log10(7.2)).div(Decimal.log10(2)).floor();
+    else lvl = Decimal.log10(dmg).plus(Decimal.log10(ac)).plus(Decimal.log10(1.8)).div(Decimal.log10(2)).floor();
+    return { damage: dmg, autoclickers: ac, bossLevel: lvl };
+  }
+
+  // Re-level every visible ancient to its optimum using the souls actually in the save
+  async function autoLevel(data, type, opts) {
+    var copy = JSON.parse(JSON.stringify(data));
+    var res = optimize(copy, Object.assign({}, opts, { hs: savedHeroSouls(copy, false) }));
+    if (!res) throw new Error('no ancients');
+    var fmt = function (d) { return d.toExponential().replace('+', ''); };
+    var spent = D(0);
+    res.rows.forEach(function (r) {
+      var entry = copy.ancients.ancients[r.id];
+      if (!entry || r.hidden || r.target.lt(r.now)) return;
+      entry.level = fmt(Decimal.max(r.target, r.now));
+      entry.spentHeroSouls = fmt(D(entry.spentHeroSouls || 0).plus(r.cost));
+      spent = spent.plus(r.cost);
+    });
+    copy.heroSouls = fmt(D(copy.heroSouls).minus(spent));
+    return { save: await encodeSave(copy, type), spent: spent };
+  }
+
+  return {
+    ANCIENTS: ANCIENTS, OUTSIDERS: OUTSIDERS, BASE_CHOICES: BASE_CHOICES,
+    sci: sci, easyCopy: easyCopy, md5: md5,
+    decodeSave: decodeSave, encodeSave: encodeSave, validateSave: validateSave,
+    detectPlaystyle: detectPlaystyle, savedHeroSouls: savedHeroSouls,
+    ancientLevels: ancientLevels, outsiderEffects: outsiderEffects,
+    optimize: optimize, soulInfo: soulInfo, raidInfo: raidInfo, autoLevel: autoLevel,
+    autoclickers: autoclickers
+  };
+})();
+/* ENGINE-END */
+
+</script>
+<script>
+/* OUTSIDERS-START
+   Outsider planner for the "root2" mod of Clicker Heroes. No DOM, no dependencies.
+   Ported from driej's Clicker-Heroes-Outsiders (root2/js/main.js). Plain floats, like the original. */
+var Outsiders = (function () {
+  'use strict';
+
+  // The original replaces Math.log10 with this; keep it so rounding matches it exactly.
+  function log10(x) { return Math.log(x) / Math.LN10; }
+
+  var BREAKPOINTS = [
+    [0, 2], [70, 3], [300, 4], [1250, 6], [2550, 7], [4000, 8], [6400, 10], [18000, 15], [40000, 20], [65000, 25],
+    [102000, 30], [145000, 35], [190000, 40], [240000, 45], [350000, 50], [485000, 55], [666000, 60], [840000, 70],
+    [1200000, 80], [1950000, 90], [2850000, 100]
+  ];
+
+  // Hero souls (log10) needed to ascend infinitely at each TP
+  var INF_ASC_HS = {
+    0.02: 65, 0.03: 160, 0.04: 236, 0.06: 7463, 0.07: 7462, 0.08: 7462, 0.10: 14184, 0.15: 43413, 0.20: 163532,
+    0.25: 285442, 0.30: 383350, 0.35: 463600, 0.40: 530799, 0.45: 612052, 0.50: 696185, 0.55: 746451, 0.60: 801517,
+    0.70: 873851, 0.80: 919765, 0.90: 955619, 1.00: 992703
+  };
+
+  var GOALS_SKIP = [
+    [0, 75], [70, 300], [300, 1235], [800, 6410], [1250, 2550], [2550, 4000], [4000, 6400], [6400, 18000], [18000, 40000],
+    [40000, 145000], [65000, 145000], [102000, 145000], [145000, 350000], [190000, 350000], [240000, 350000],
+    [350000, 840000], [485000, 840000], [666000, 1200000], [840000, 1200000], [1200000, 4390000], [4385000, 24770000],
+    [24766000, 126400000], [126393000, 'cap']
+  ];
+  var GOALS_NO_SKIP = [
+    [0, 75], [70, 300], [300, 1250], [1250, 2550], [2550, 4000], [4000, 6400], [6400, 18000], [18000, 40000],
+    [40000, 65000], [65000, 102000], [102000, 145000], [145000, 190000], [190000, 240000], [240000, 350000],
+    [350000, 485000], [485000, 666000], [666000, 840000], [840000, 1200000], [1200000, 1950000], [1950000, 4390000],
+    [2850000, 4390000], [4385000, 24770000], [24766000, 126400000], [126393000, 'cap']
+  ];
+
+  var ORDER = [
+    { key: 'xyliqil', name: 'Xyliqil', id: 1 },
+    { key: 'chor', name: "Chor'gorloth", id: 2 },
+    { key: 'phan', name: 'Phandoryss', id: 3 },
+    { key: 'pony', name: 'Ponyboy', id: 5 },
+    { key: 'borb', name: 'Borb', id: 6 },
+    { key: 'rhageist', name: 'Rhageist', id: 7 },
+    { key: 'kariqua', name: "K'Ariqua", id: 8 },
+    { key: 'orphalas', name: 'Orphalas', id: 9 },
+    { key: 'senakhan', name: 'Sen-Akhan', id: 10 }
+  ];
+
+  var HARD_CAP = 2147483647;   // 2^31 - 1
+
+  function getTP(as) {
+    for (var i = BREAKPOINTS.length - 1; i >= 0; i--) if (as >= BREAKPOINTS[i][0]) return BREAKPOINTS[i][1];
+  }
+  function getASGoal(as, skip) {
+    var goals = skip ? GOALS_SKIP : GOALS_NO_SKIP;
+    for (var i = goals.length - 1; i >= 0; i--) if (as >= goals[i][0]) return goals[i][1];
+  }
+  function costOf(level) { return (level + 1) * (level / 2); }
+  function spendAS(ratio, as) {
+    var spendable = ratio * as;
+    if (spendable < 1) return 0;
+    return Math.floor(Math.pow(8 * spendable + 1, 0.5) / 2 - 0.5);
+  }
+
+  // Splits what is left between Chor'gorloth, Phandoryss and Ponyboy, one level at a time, by best return per AS
+  function nOS(as, transcendentPower, zone) {
+    if (as > 20000) {
+      as -= 11325;
+      var p = spendAS(0.88, as);
+      as -= costOf(p);
+      return [150, as, p];
+    }
+    var hpMultiplier = Math.min(1.545, 1.145 + zone / 500000);
+    var hsMultiplier = Math.pow(1 + transcendentPower, 0.2);
+    var heroDamageMultiplier = (zone > 1.2e6) ? 1000 : ((zone > 168000) ? 4.5 : 4);
+    var heroCostMultiplier = (zone > 1.2e6) ? 1.22 : 1.07;
+    var goldToDps = log10(heroDamageMultiplier) / log10(heroCostMultiplier) / 25;
+    var dpsToZones = log10(hpMultiplier) - log10(1.15) * goldToDps;
+    var chor = 0, phan = 0, pony = 0;
+    var chorBuff = 1 / 0.95;
+
+    while (as > 0) {
+      if (pony < 1) { as -= ++pony; continue; }
+      else if (phan < 3) { phan++; as--; continue; }
+
+      var damageIncrease = (phan + 2) / (phan + 1);
+      var zoneIncrease = log10(damageIncrease) / dpsToZones;
+      var phanBuff = Math.pow(hsMultiplier, zoneIncrease);
+      if (phan < 50) phanBuff *= Math.pow(1.1, 1 / phan);       // boost Phandoryss for FANT
+
+      if (chor < as && chor < 150) {
+        var chorBpAS = Math.pow(chorBuff, 1 / (chor + 1));
+        if (chorBpAS >= phanBuff) {
+          if (pony < as) {
+            var ponyBuff = (Math.pow(pony + 1, 2) * 10 + 1) / (Math.pow(pony, 2) * 10 + 1);
+            var ponyBpAS = Math.pow(ponyBuff, 1 / (pony + 1));
+            if (ponyBpAS >= chorBpAS) { as -= ++pony; continue; }
+          }
+          as -= ++chor;
+          continue;
+        }
+      }
+      if (pony < as) {
+        var ponyBuff2 = (Math.pow(pony + 1, 2) * 10 + 1) / (Math.pow(pony, 2) * 10 + 1);
+        var ponyBpAS2 = Math.pow(ponyBuff2, 1 / (pony + 1));
+        if (ponyBpAS2 >= phanBuff) { as -= ++pony; continue; }
+      }
+      phan++;
+      as--;
+    }
+    return [chor, phan, pony];
+  }
+
+  // Borb level needed to reach the first fast-ascension target early in the game
+  function getBorbFant(as, transcendentPower) {
+    var r = nOS(as * 0.3, transcendentPower, 100);
+    var chor = r[0], pony = r[2];
+    var ponyBonus = Math.pow(pony, 2) + 1;
+    var chorBonus = Math.pow(1 / 0.95, chor);
+    var tp = 1 + transcendentPower;
+    var s = tp * tp;
+    var a = s + s * s + s * s * s;
+    var hsFant = 20 * ponyBonus * a;
+    var logHSFant = log10(Math.max(1, hsFant));
+    logHSFant += log10(chorBonus);
+    var kumaFant = Math.max(1, Math.floor(logHSFant / log10(2) - 3 / Math.log(2)) - 1);
+    var kumaCoeff = 8.4 / Math.log(kumaFant + 2.719);
+    return Math.ceil((-0.1 + Math.pow(kumaCoeff / 3125 + 0.0092, 0.5)) * 6250);
+  }
+
+  function plan(ancientSouls, skipBPs) {
+    var transcendentPower = getTP(ancientSouls) / 100;
+    var tp = 1 + transcendentPower;
+    var targetAS = getASGoal(ancientSouls, skipBPs);
+
+    var newHze;
+    if (targetAS === 'cap') newHze = HARD_CAP;
+    else newHze = (targetAS / 5 - log10(20 * tp / transcendentPower)) / log10(tp) * 5 + 100;
+    newHze = Math.ceil(newHze);
+
+    var newLogHeroSouls = log10(tp) * newHze / 5 - 2;
+
+    // Ancient effects at the end of the run
+    var ancientLevels = Math.floor(newLogHeroSouls * (targetAS === 'cap' ? 1 : 0.9) / log10(2) - 3 / Math.log(2)) - 1;
+    var nerfs = Math.floor(newHze / 500);
+    var baseMPZ = 10 + nerfs * 0.1;
+    var chancemult = Math.pow(nerfs + 1, -2);
+    var baseHP = 10 + nerfs * 0.4;
+    var kumaCoeff = (baseMPZ - 2) / Math.log(ancientLevels + 2.719);
+    var atmanExp = Math.log(1 / chancemult * 100 - 25) / Math.log(Math.log(ancientLevels + 2.719));
+    var bubosCoeff = (baseHP - 5) / Math.log(ancientLevels + 2.719);
+    var doraExp = Math.log(1 / chancemult * 100 - 25) / Math.log(Math.log(ancientLevels + 2.719));
+
+    // Outsider caps
+    var borbCap = Math.ceil((-0.1 + Math.pow(kumaCoeff / 3125 + 0.0092, 0.5)) * 6250);
+    var rhageistCap = Math.ceil(-100 * Math.log(-(atmanExp - 7) / 2 + 1));
+    var kariquaCap = Math.ceil((-0.4 + Math.pow(bubosCoeff * 0.00128 + 0.1568, 0.5)) / 0.00064);
+    var senakhanCap = Math.ceil(-100 * Math.log(-(doraExp - 6.75) / 2 + 1));
+
+    if (skipBPs && transcendentPower === 0.4) borbCap += 2;     // problematic breakpoint skip
+
+    // The caps break down at very high levels
+    if (isNaN(rhageistCap)) rhageistCap = spendAS(ancientSouls, 1);
+    if (isNaN(senakhanCap)) senakhanCap = spendAS(ancientSouls, 1);
+
+    // Share of the remaining AS each outsider gets
+    var xyliqilRatio = 0.15, rhageistRatio = 0.2, kariquaRatio = 0.05;
+    var orphalasRatio = ancientSouls < 70 ? 0 : 0.15;
+    var senakhanRatio = 0.05;
+
+    var borbFant = ancientSouls < 1250
+      ? Math.min(getBorbFant(ancientSouls, transcendentPower), spendAS(0.35, ancientSouls))
+      : 0;
+    var borbLevel = Math.max(0, borbCap, borbFant);
+    if (costOf(borbLevel) >= ancientSouls * 0.99) borbLevel = spendAS(ancientSouls * 0.99, 1);
+    if (costOf(borbLevel) >= ancientSouls - 5) borbLevel = spendAS(ancientSouls - 5, 1);
+    var remaining = ancientSouls - costOf(borbLevel);
+    var xyliqilLevel = Math.max(1, spendAS(remaining, xyliqilRatio));
+    if (remaining === 0) xyliqilLevel = 0;
+    if (xyliqilLevel > 196) xyliqilLevel = 196;
+    var rhageistLevel = Math.min(spendAS(remaining, rhageistRatio), rhageistCap, 530);
+    var kariquaLevel = Math.min(spendAS(remaining, kariquaRatio), kariquaCap);
+    var senakhanLevel = Math.min(spendAS(remaining, senakhanRatio), senakhanCap, 530);
+    var orphalasLevel = Math.min(spendAS(remaining, orphalasRatio), 864);
+
+    remaining -= costOf(xyliqilLevel);
+    remaining -= costOf(rhageistLevel);
+    remaining -= costOf(kariquaLevel);
+    remaining -= costOf(orphalasLevel);
+    remaining -= costOf(senakhanLevel);
+
+    var cps = nOS(remaining, transcendentPower, newHze);
+    var chorLevel = cps[0], phanLevel = cps[1], ponyLevel = cps[2];
+    remaining -= costOf(chorLevel);
+    remaining -= phanLevel;
+    remaining -= costOf(ponyLevel);
+
+    // End of transcension estimates
+    var ponyBonus = Math.pow(ponyLevel, 2);
+    var series = 1 / (1 - 1 / (1 + transcendentPower));
+    var atmanExp2 = 7 + 2 * (1 - Math.exp(-0.01 * rhageistLevel));
+    var buffedPrimalBossChance = Math.pow(Math.log(ancientLevels + 2.719), atmanExp2) * chancemult;
+    buffedPrimalBossChance = Math.max(5, buffedPrimalBossChance);
+    var pbcm = Math.min(buffedPrimalBossChance, 100) / 100;
+
+    newLogHeroSouls = log10(1 + transcendentPower) * (newHze - 100) / 5 + log10(ponyBonus + 1) + log10(20 * series * pbcm);
+    var newAncientSouls = Math.max(ancientSouls, Math.floor(newLogHeroSouls * 5));
+    var newTP = getTP(newAncientSouls);
+
+    // Buffed stats at the highest zone
+    var borbCoeff = 0.00008 * borbLevel * borbLevel + 0.1 * borbLevel + 2.5;
+    var kariquaCoeff = 0.00032 * kariquaLevel * kariquaLevel + 0.4 * kariquaLevel + 2.5;
+    var rhageistCoeff = 2 * (1 - Math.exp(rhageistLevel * -0.01)) + 7;
+    var senakhanCoeff = 2 * (1 - Math.exp(senakhanLevel * -0.01)) + 6.75;
+    var nerfs2 = Math.floor(newHze / 500);
+    var unbuffedMPZ = 10 + nerfs2 * 0.1;
+    var unbuffedTCC = 1 / Math.pow(nerfs2 + 1, 2);
+    var unbuffedBossHP = 10 + nerfs2 * 0.4;
+    var unbuffedTimer = 30 - nerfs2 / 200;
+    var unbuffedPBC = 1 / Math.pow(nerfs2 + 1, 2);
+    var stats = function (levels) {
+      var alpha = Math.log(levels + 2.719);
+      return {
+        mpz: unbuffedMPZ - alpha * borbCoeff,
+        tcc: Math.max(1, unbuffedTCC * (1 + Math.pow(alpha, senakhanCoeff))),
+        bossHp: unbuffedBossHP - alpha * kariquaCoeff,
+        timer: Math.max(2, unbuffedTimer + alpha * 10),
+        pbc: Math.max(5, unbuffedPBC * (25 + Math.pow(alpha, rhageistCoeff)))
+      };
+    };
+    var buffed = stats(ancientLevels);
+    var lowestHS = INF_ASC_HS[transcendentPower];
+    var buffedLow = null;     // if you ascend with the minimum hero souls instead of a full run
+    if (lowestHS < newLogHeroSouls * (targetAS === 'cap' ? 1 : 0.9)) {
+      buffedLow = stats(Math.floor(lowestHS / log10(2) - 3 / Math.log(2)) - 1);
+    }
+
+    var levels = {
+      xyliqil: xyliqilLevel, chor: chorLevel, phan: phanLevel, pony: ponyLevel, borb: borbLevel,
+      rhageist: rhageistLevel, kariqua: kariquaLevel, orphalas: orphalasLevel, senakhan: senakhanLevel
+    };
+    var costs = {};
+    ORDER.forEach(function (o) { costs[o.key] = o.key === 'phan' ? levels[o.key] : costOf(levels[o.key]); });
+    var L = levels;
+    var share = [L.xyliqil, L.chor, L.phan, L.pony].join('/') + '//' +
+      [L.borb, L.rhageist, L.kariqua, L.orphalas, L.senakhan].join('/');
+
+    return {
+      ancientSouls: ancientSouls, skipBPs: !!skipBPs, tpNow: transcendentPower * 100, targetAS: targetAS,
+      levels: levels, costs: costs, unspent: remaining, share: share,
+      newHze: newHze, newLogHeroSouls: newLogHeroSouls, newAncientSouls: newAncientSouls,
+      ancientSoulsDiff: newAncientSouls - ancientSouls, newTP: newTP, ancientLevels: ancientLevels,
+      buffed: buffed, buffedLow: buffedLow
+    };
+  }
+
+  // What the original page tells you under the results. Strings may contain <b> only.
+  function notes(as, skip) {
+    var n = [];
+    var fmt = function (v) { return Number(v).toLocaleString('en-US'); };
+    var hardCap = fmt(HARD_CAP);
+    if (as === 0) {
+      n.push('You need to have ancient souls for this to work. Transcend as soon as you unlock transcendence at zone 300.');
+      return n;
+    }
+    if (skip && as < 1950000) {
+      n.push('It is sometimes (but not always) possible to skip breakpoints and not all skips save time. The calculator will only tell you to do practical skips.');
+      if (as < 300) n.push('You will not be skipping breakpoints this time.');
+      else if (as < 800) {
+        n.push('You do <b>not</b> want to reach the next breakpoint yet! Make sure you do not reach 1250 total Ancient Souls (no more than +' + (1249 - as) + ' gained).');
+        n.push('The purpose of this run is to get more levels into Borb in preparation for several skips, not to reach the next breakpoint.');
+      }
+      else if (as < 1250) n.push('You will be skipping the 6%, 7% and 8% breakpoints and heading straight for 10% (6,400 AS). High monsters per zone is normal, it is still a lot faster this way.');
+      else if (as < 40000) n.push('You will not be skipping breakpoints this time.');
+      else if (as < 65000) n.push('You will be skipping the 25% and 30% breakpoints and heading straight for 35% (145,000 AS).');
+      else if (as < 102000) n.push('You will be skipping the 30% breakpoint and heading straight for 35% (145,000 AS).');
+      else if (as < 145000) n.push('You will not be skipping breakpoints this time.');
+      else if (as < 190000) n.push('You will be skipping the 40% and 45% breakpoints and heading straight for 50% (350,000 AS).');
+      else if (as < 240000) n.push('You will be skipping the 45% breakpoint and heading straight for 50% (350,000 AS).');
+      else if (as < 350000) n.push('You will not be skipping breakpoints this time.');
+      else if (as < 485000) n.push('You will be skipping the 55% and 60% breakpoints and heading straight for 70% (840,000 AS).');
+      else if (as < 666000) n.push('You will be skipping the 60% breakpoint and heading straight for 70% (840,000 AS).');
+      else if (as < 840000) n.push('You will be skipping the 70% breakpoint and heading straight for 80% (1,200,000 AS).');
+      else if (as < 1200000) n.push('You will not be skipping breakpoints this time.');
+      else if (as < 1950000) n.push('You will be skipping the 90% breakpoint and heading past 100% (2,850,000 AS).');
+    }
+    if (!skip && as < 1950000) {
+      n.push('You are playing the intended way by not skipping breakpoints. You can enable Skip breakpoints for a much faster game, but you will skip a lot of the game.');
+    }
+    if (as < 1200000) {
+      if (!(skip && as >= 300 && as < 800)) {
+        n.push('In this version, TP only goes up at specific AS amounts called breakpoints. There is no reason to transcend anywhere but just after reaching a new breakpoint, except in special cases: performing the 4% to 10% skip, and pushing past the last breakpoint.');
+      }
+    } else if (as < 2850000) {
+      n.push('You can stop at the 100% breakpoint (the last breakpoint) at 2,850,000 AS and be finished, or continue playing until the game breaks.');
+      n.push('You need to transcend 3 more times to be able to reach the hard cap (zone ' + hardCap + ').');
+    } else if (as < 4385000) n.push('You need to transcend 3 more times to be able to reach the hard cap (zone ' + hardCap + ').');
+    else if (as < 24766000) n.push('You need to transcend 2 more times to be able to reach the hard cap (zone ' + hardCap + ').');
+    else if (as < 126393000) n.push('You need to transcend 1 more time to be able to reach the hard cap (zone ' + hardCap + ').');
+    else n.push('You can reach the hard cap (zone ' + hardCap + ') this run!');
+    if (as >= 4385000) {
+      n.push('Take advantage of the fact that timelapses use your <i>current</i> monsters per zone. Use a 168h timelapse between 500k and 756k below your final zone. Ascend and try again if you mess this up.');
+    }
+    return n;
+  }
+
+  // Writes the plan's outsider levels into a decoded save. Returns { data } or { error }.
+  function applyToSave(data, p) {
+    var copy = JSON.parse(JSON.stringify(data));
+    if (!copy.outsiders) copy.outsiders = { outsiders: {} };
+    var store = copy.outsiders.outsiders || (copy.outsiders.outsiders = {});
+    var tooHigh = [];
+    ORDER.forEach(function (o) {
+      var cur = store[o.id] ? Number(store[o.id].level) : 0;
+      if (cur > p.levels[o.key]) tooHigh.push(o.name);
+    });
+    if (tooHigh.length) return { error: 'tooHigh', tooHigh: tooHigh };
+    ORDER.forEach(function (o) {
+      if (!store[o.id]) store[o.id] = { id: o.id, level: 0, spentAncientSouls: 0 };
+      store[o.id].level = p.levels[o.key];
+      store[o.id].spentAncientSouls = o.key === 'phan' ? p.levels[o.key] : costOf(p.levels[o.key]);
+    });
+    copy.ancientSouls = p.unspent;
+    return { data: copy };
+  }
+
+  return { ORDER: ORDER, plan: plan, notes: notes, applyToSave: applyToSave, getTP: getTP, costOf: costOf, HARD_CAP: HARD_CAP };
+})();
+/* OUTSIDERS-END */
+
+</script>
+<script>
+var SAMPLE_SAVE = {"ancients":{"ancients":{"4":{"id":4,"level":"6.639387e150","spentHeroSouls":"7.130915e300"},"5":{"id":5,"level":"7.813422e150","spentHeroSouls":"9.875791e300"},"8":{"id":8,"level":"6.979868e150","spentHeroSouls":"7.881044e300"},"9":{"id":9,"level":"6.724507e150","spentHeroSouls":"7.314931e300"},"11":{"id":11,"level":"8.780000e2","spentHeroSouls":"1.304024e264"},"12":{"id":12,"level":"9.260000e2","spentHeroSouls":"3.670501e278"},"13":{"id":13,"level":"8.760000e2","spentHeroSouls":"3.260059e263"},"14":{"id":14,"level":"8.520000e2","spentHeroSouls":"1.943147e256"},"16":{"id":16,"level":"7.097804e301","spentHeroSouls":"2.296378e301"},"17":{"id":17,"level":"8.280000e2","spentHeroSouls":"1.158206e249"},"18":{"id":18,"level":"9.240000e2","spentHeroSouls":"9.176251e277"},"21":{"id":21,"level":"8.880000e2","spentHeroSouls":"1.335320e267"},"28":{"id":28,"level":"7.537654e150","spentHeroSouls":"9.190979e300"},"32":{"id":32,"level":"4.381812e120","spentHeroSouls":"5.201322e300"}}},"ancientEntrySizes":{"4":0,"5":0,"8":0,"9":0,"11":0,"12":0,"13":0,"14":0,"16":0,"17":0,"18":0,"21":0,"28":0,"32":0},"outsiders":{"outsiders":{"1":{"id":1,"level":"14"},"2":{"id":2,"level":"22"},"3":{"id":3,"level":"48"},"5":{"id":5,"level":"9"},"6":{"id":6,"level":"6"},"7":{"id":7,"level":"12"},"8":{"id":8,"level":"8"},"9":{"id":9,"level":"7"},"10":{"id":10,"level":"5"}}},"heroSouls":"6.4e301","heroSoulsSacrificed":"3.1e300","primalSouls":"4.4e298","totalHeroLevels":"3400000","ancientSoulsTotal":"1496","highestFinishedZonePersist":"2150","titanDamage":"2.7e168","autoclickers":"14","dlcAutoclickers":"0"};
+</script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var fatal = $('#fatal');
+  if (typeof Decimal === 'undefined' || typeof Engine === 'undefined' || typeof Outsiders === 'undefined') {
+    fatal.hidden = false;
+    fatal.textContent = 'The calculator could not start. Reload the page, and if it still fails, try another browser.';
+    $('#app').hidden = true;
+    return;
+  }
+
+  var E = Engine;
+  var D = function (v) { return new Decimal(v); };
+  var group = function (s) { return s.replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+  var signed = function (d) { return (d.gte(0) ? '+' : '\u2212') + d.abs().toFixed(0); };
+  var show = function (d) { return d.lt(100000) ? group(d.toFixed(0)) : E.sci(d, 4); };
+  var parseDec = function (str) {
+    str = String(str).trim().replace(/,/g, '');
+    if (!str) return null;
+    try { var d = new Decimal(str); return d.isFinite() ? d : null; } catch (e) { return null; }
+  };
+
+  var el = {
+    save: $('#saveInput'), saveCard: $('#saveCard'), status: $('#status'), openFile: $('#openFile'), file: $('#fileInput'),
+    ratioField: $('#ratioField'), ratio: $('#ratio'), zone: $('#zone'), hs: $('#hs'), useNext: $('#useNext'), wep8k: $('#wep8k'),
+    other: $('#other'), otherSub: $('#otherSub'), otherLower: $('#otherLower'), otherBase: $('#otherBase'), detected: $('#detectedNote'),
+    options: $('#options'), ledger: $('#ledger'), hiddenNote: $('#hiddenNote')
+  };
+  var state = { save: null, res: null, token: 0, asMore: 0 };
+
+  /* ---------- remembered settings (optional) ---------- */
+  var KEY = 'chac.settings.v1';
+  function loadSettings() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY) || '{}');
+      if (typeof s.wep8k === 'boolean') el.wep8k.checked = s.wep8k;
+      if (typeof s.other === 'boolean') el.other.checked = s.other;
+      if (s.otherLower !== undefined) el.otherLower.value = s.otherLower;
+      if (s.otherBase) el.otherBase.value = s.otherBase;
+      if (typeof s.outSkip === 'boolean') oel.skip.checked = s.outSkip;
+      if (typeof s.outTips === 'boolean') oel.tips.checked = s.outTips;
+    } catch (e) { /* storage unavailable */ }
+  }
+  function saveSettings() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({
+        wep8k: el.wep8k.checked, other: el.other.checked, otherLower: el.otherLower.value, otherBase: el.otherBase.value,
+        outSkip: oel.skip.checked, outTips: oel.tips.checked
+      }));
+    } catch (e) { /* storage unavailable */ }
+  }
+
+  E.BASE_CHOICES.forEach(function (b) {
+    var o = document.createElement('option');
+    o.value = b[0]; o.textContent = b[1];
+    if (b[0] === 17) o.selected = true;
+    el.otherBase.appendChild(o);
+  });
+
+  /* ---------- toast + copy ---------- */
+  var toastTimer;
+  function toast(msg) {
+    var t = $('#toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 1800);
+  }
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+  function copyText(text, okMsg) {
+    var done = function (ok) { toast(ok ? okMsg : 'Copy was blocked. Select the text and copy it yourself.'); return ok; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(function () { return done(true); }, function () { return done(legacyCopy(text)); });
+    }
+    return Promise.resolve(done(legacyCopy(text)));
+  }
+
+  /* ---------- reading the controls ---------- */
+  function readOpts() {
+    var playstyle = document.querySelector('input[name="playstyle"]:checked').value;
+    var ratio = parseFloat(el.ratio.value);
+    if (!(ratio > 0)) ratio = 1;
+    ratio = Math.min(1000, Math.max(0.1, ratio));
+    var lower = parseInt(el.otherLower.value, 10);
+    if (isNaN(lower)) lower = 5;
+    var data = state.save.data;
+    var zone = parseDec(el.zone.value);
+    if (!zone || !zone.gt(0)) zone = D(data.highestFinishedZonePersist || 0);
+    var savedHs = E.savedHeroSouls(data, el.useNext.checked);
+    var hs = parseDec(el.hs.value);
+    if (!hs || !hs.gt(0)) hs = savedHs;
+    return {
+      playstyle: playstyle, ratio: ratio, ascZone: zone, wep8k: el.wep8k.checked, other: el.other.checked,
+      otherLower: Math.min(10, Math.max(0, lower)), otherBase: Number(el.otherBase.value), hs: hs, useNext: el.useNext.checked,
+      savedHs: savedHs, savedZone: D(data.highestFinishedZonePersist || 0)
+    };
+  }
+
+  /* ---------- rendering ---------- */
+  function setText(id, t) { $(id).textContent = t; }
+
+  function renderSummary(o, res, info) {
+    setText('#sHs', show(o.hs));
+    setText('#sHsNote', o.hs.eq(o.savedHs) ? 'from your save' : 'planning figure');
+    setText('#sAs', show(info.as));
+    $('#sAsNote').innerHTML = '<b>' + signed(info.gain) + '</b> if you transcend now';
+    if (!res) {
+      setText('#sSpent', '-'); setText('#sLeft', '-'); setText('#sSpentNote', ' ');
+      return;
+    }
+    setText('#sSpent', show(res.spent));
+    setText('#sLeft', show(Decimal.max(0, res.left)));
+    var pct = o.hs.gt(0) ? res.spent.div(o.hs).times(100).toNumber() : 0;
+    setText('#sSpentNote', pct.toFixed(pct >= 99.95 || pct === 0 ? 0 : 2) + '% of your souls');
+  }
+
+  function renderLedger(res) {
+    if (!res) {
+      el.ledger.innerHTML = '<li class="empty">This save has no summoned ancients yet. Summon some in the game, export again, and paste the new save.</li>';
+      el.hiddenNote.hidden = true;
+      return;
+    }
+    var shown = res.rows.filter(function (r) { return !r.hidden; });
+    var total = res.spent;
+    var html = '<li class="head" aria-hidden="true"><span>Ancient</span><span>Now</span><span>Target</span><span>Level up by</span><span>Hero soul cost</span></li>';
+    shown.forEach(function (r) {
+      var share = total.gt(0) ? r.cost.div(total).times(100).toNumber() : 0;
+      var width = share > 0 ? Math.max(2, Math.min(100, share)) : 0;
+      var buy = r.change.gt(0)
+        ? '<button class="buy" type="button" data-copy="' + E.easyCopy(r.change) + '" data-name="' + r.name + '" title="Copy ' + E.easyCopy(r.change) + '">+' + show(r.change) + '</button>'
+        : '<span class="buy none">at target</span>';
+      html += '<li><span class="name">' + r.name + '</span>' +
+        '<span class="cell num now" data-label="Now">' + show(r.now) + '</span>' +
+        '<span class="cell num target" data-label="Target">' + show(r.target) + '</span>' +
+        buy +
+        '<span class="cell cost" data-label="Hero soul cost"><span class="num">' + (r.cost.gt(0) ? show(r.cost) : '0') + '</span>' +
+        '<span class="meter" title="' + share.toFixed(share < 10 ? 1 : 0) + '% of the total spend"><i style="width:' + width + '%"></i></span></span></li>';
+    });
+    el.ledger.innerHTML = html;
+    var hidden = res.rows.length - shown.length;
+    el.hiddenNote.hidden = hidden === 0;
+    el.hiddenNote.textContent = hidden + ' more ancient' + (hidden === 1 ? ' is' : 's are') + ' left out: not summoned, minimised in the game, or not used by this playstyle.';
+  }
+
+  function renderOutsiders(o, info) {
+    var eff = E.outsiderEffects(state.save.data);
+    $('#outsiderList').innerHTML = eff.list.map(function (x) {
+      return '<li><span class="name">' + x.name + '</span><span class="num">Lv ' + show(x.level) + '</span><span class="eff">' + x.effect + '</span></li>';
+    }).join('');
+    $('#soulKv').innerHTML =
+      '<div><span class="k">Transcendent power</span><span class="v">' + info.tp.times(100).toFixed(2) + '%</span></div>' +
+      '<div><span class="k">Ancient souls</span><span class="v">' + show(info.as) + '</span></div>' +
+      '<div><span class="k">Ancient souls gained if you transcend now</span><span class="v">' + signed(info.gain) + '</span></div>';
+    $('#asSteps').innerHTML = info.steps.map(function (s) {
+      return '<li><span><b>' + signed(s.as) + '</b> ancient souls</span><span class="num">' + show(Decimal.max(0, s.need)) + ' more hero souls</span></li>';
+    }).join('');
+    $('#asLess').disabled = state.asMore <= 0;
+    $('#asMore').disabled = state.asMore >= 95;
+  }
+
+  function renderRaid() {
+    var r = E.raidInfo(state.save.data);
+    var ac = r.autoclickers;
+    var how = ac.eq(0) ? '1200 clicks per try' : ac.toFixed(0) + ' autoclicker' + (ac.eq(1) ? '' : 's');
+    $('#raidKv').innerHTML =
+      '<div><span class="k">Immortal damage</span><span class="v">' + show(r.damage) + '</span></div>' +
+      '<div><span class="k">Highest boss you can beat in 3 tries (' + how + ')</span><span class="v">' + show(Decimal.max(0, r.bossLevel)) + '</span></div>';
+  }
+
+  var pending = 0;
+  var mode = 'ancients';
+  var exportStamp = 0;
+  function update() {
+    exportStamp++;   // any change makes an earlier export stale
+    if (!state.save) return;
+    if (mode === 'outsiders') updateOutsiders(); else updateAncients();
+  }
+  function updateAncients() {
+    setMsg('#exportNote', '');   // options changed, so an earlier export no longer matches
+    var o = readOpts();
+    el.hs.placeholder = 'Using ' + show(o.savedHs) + ' from your save';
+    el.zone.placeholder = 'Using ' + show(o.savedZone) + ' from your save';
+    var res = null;
+    try { res = E.optimize(state.save.data, o); }
+    catch (err) { console.error(err); setStatus('err', 'Error', 'The calculation failed on this save. It may be from a different game version.'); return; }
+    state.res = res;
+    var info = E.soulInfo(state.save.data, o.useNext, state.asMore);
+    renderSummary(o, res, info);
+    renderLedger(res);
+    renderOutsiders(o, info);
+    renderRaid();
+  }
+  function updateSoon() { clearTimeout(pending); pending = setTimeout(update, 140); }
+
+  try { localStorage.removeItem('chac.ascent.v1'); } catch (e) { /* storage off */ }
+
+  /* ---------- loading a save ---------- */
+  function setStatus(kind, chip, text) {
+    el.status.innerHTML = '<span class="chip ' + (kind === 'ok' ? 'ok' : kind === 'err' ? 'err' : '') + '">' + chip + '</span><span></span>';
+    el.status.lastChild.textContent = text;
+  }
+
+  function applyDetection(data) {
+    var det = E.detectPlaystyle(data);
+    document.querySelector('input[name="playstyle"][value="' + det.playstyle + '"]').checked = true;
+    el.ratio.value = det.ratio;
+    el.ratioField.hidden = det.playstyle !== 'hybrid';
+    el.detected.textContent = 'detected from your save';
+    el.zone.value = '';
+    el.hs.value = '';
+    oel.as.value = '';
+    state.asMore = 0;
+  }
+
+  function loadSave(text, isSample) {
+    var token = ++state.token;
+    return E.decodeSave(text).then(function (parsed) {
+      if (token !== state.token) return;
+      E.validateSave(parsed.data);
+      state.save = { data: parsed.data, type: parsed.type, sample: !!isSample };
+      applyDetection(parsed.data);
+      var n = E.ANCIENTS.filter(function (a) { return parsed.data.ancients.ancients[a.id]; }).length;
+      var as = show(D(parsed.data.ancientSoulsTotal || 0));
+      if (isSample) setStatus('', 'Example', 'A made-up late-game save so you can see how this works. Paste yours to replace it.');
+      else setStatus('ok', 'Loaded', as + ' ancient souls, ' + n + ' ancients summoned.');
+      setMsg('#exportNote', ''); setMsg('#outExportNote', '');
+      update();
+    }).catch(function (err) {
+      if (token !== state.token) return;
+      var msg = String(err && err.message || '');
+      if (/DecompressionStream/.test(msg)) setStatus('err', 'Unsupported', msg);
+      else setStatus('err', 'Not a save', 'That is not a Clicker Heroes save. Copy the whole export string, with every character, and paste it again.');
+    });
+  }
+
+  var typing;
+  el.save.addEventListener('input', function () {
+    clearTimeout(typing);
+    var v = el.save.value;
+    if (!v.trim()) return;
+    typing = setTimeout(function () { loadSave(v, false); }, 200);
+  });
+  el.save.addEventListener('click', function () { el.save.select(); });
+  el.openFile.addEventListener('click', function () { el.file.click(); });
+  function readFile(f) {
+    if (!f) return;
+    f.text().then(function (t) { el.save.value = t.length > 200000 ? '' : t; loadSave(t, false); });
+  }
+  el.file.addEventListener('change', function () { readFile(el.file.files[0]); el.file.value = ''; });
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    el.saveCard.addEventListener(ev, function (e) { e.preventDefault(); el.saveCard.classList.add('drag'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    el.saveCard.addEventListener(ev, function (e) { e.preventDefault(); el.saveCard.classList.remove('drag'); });
+  });
+  el.saveCard.addEventListener('drop', function (e) { readFile(e.dataTransfer && e.dataTransfer.files[0]); });
+
+  /* ---------- controls ---------- */
+  document.querySelectorAll('input[name="playstyle"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      el.ratioField.hidden = r.value !== 'hybrid';
+      el.detected.textContent = '';
+      update();
+    });
+  });
+  [el.ratio, el.zone, el.hs, el.otherLower].forEach(function (i) {
+    i.addEventListener('input', function () { updateSoon(); saveSettings(); });
+  });
+  [el.useNext, el.wep8k, el.other, el.otherBase].forEach(function (i) {
+    i.addEventListener('change', function () { el.otherSub.hidden = !el.other.checked; saveSettings(); update(); });
+  });
+
+  /* ---------- tabs ---------- */
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  function selectTab(t, focus) {
+    tabs.forEach(function (x) {
+      var on = x === t;
+      x.setAttribute('aria-selected', on ? 'true' : 'false');
+      x.tabIndex = on ? 0 : -1;
+      $('#' + x.getAttribute('aria-controls')).hidden = !on;
+    });
+    if (focus) t.focus();
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { selectTab(t, false); });
+    t.addEventListener('keydown', function (e) {
+      var j = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i + tabs.length - 1) % tabs.length : -1;
+      if (j >= 0) { e.preventDefault(); selectTab(tabs[j], true); }
+    });
+  });
+
+  /* ---------- ledger copy ---------- */
+  el.ledger.addEventListener('click', function (e) {
+    var b = e.target.closest('.buy[data-copy]');
+    if (!b) return;
+    copyText(b.dataset.copy, 'Copied ' + b.dataset.copy + ' for ' + b.dataset.name).then(function (ok) {
+      if (!ok) return;
+      b.classList.add('done');
+      setTimeout(function () { b.classList.remove('done'); }, 800);
+    });
+  });
+
+  $('#asLess').addEventListener('click', function () { state.asMore = Math.max(0, state.asMore - 5); update(); });
+  $('#asMore').addEventListener('click', function () { state.asMore = Math.min(95, state.asMore + 5); update(); });
+
+  /* ---------- export: one click copies, Show save opens it ---------- */
+  var dlg = $('#saveDialog');
+  function showSaveDialog(text, note) {
+    $('#dlgText').value = text;
+    $('#dlgNote').textContent = note || '';
+    if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); }
+    else dlg.setAttribute('open', '');
+    var ta = $('#dlgText'); ta.focus(); ta.select();
+  }
+  function closeSaveDialog() { if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open'); }
+  $('#dlgClose').addEventListener('click', closeSaveDialog);
+  dlg.addEventListener('click', function (e) { if (e.target === dlg) closeSaveDialog(); });
+  $('#dlgCopy').addEventListener('click', function () {
+    var ta = $('#dlgText');
+    copyText(ta.value, 'Copied the new save').then(function (ok) { if (!ok) ta.select(); });
+  });
+
+  function setMsg(sel, text, kind) {
+    var m = $(sel);
+    m.textContent = text;
+    m.className = 'export-msg' + (kind ? ' ' + kind : '');
+    m.hidden = !text;
+  }
+
+  // Copies a save that is still being built. Starting the clipboard write inside the click keeps the browser's permission
+  // while the save compresses; if that is refused, try plain text, then the old select-and-copy.
+  function copyPending(pending) {
+    var viaItem = Promise.resolve(false);
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      try {
+        var blob = pending.then(function (r) { return new Blob([r.save], { type: 'text/plain' }); });
+        blob.catch(function () { /* the build error is reported below */ });
+        viaItem = navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]).then(function () { return true; }, function () { return false; });
+      } catch (e) { viaItem = Promise.resolve(false); }
+    }
+    return pending.then(function (r) {
+      return viaItem.then(function (ok) {
+        if (ok) return { r: r, copied: true };
+        var plain = navigator.clipboard && navigator.clipboard.writeText
+          ? navigator.clipboard.writeText(r.save).then(function () { return true; }, function () { return legacyCopy(r.save); })
+          : Promise.resolve(legacyCopy(r.save));
+        return plain.then(function (copied) { return { r: r, copied: copied }; });
+      });
+    });
+  }
+
+  // The last save built stays valid until anything changes (see exportStamp), so Show save shows exactly what was copied.
+  function wireExport(btnSel, showSel, msgSel, build) {
+    var last = null;
+    function cached() {
+      if (last && last.stamp === exportStamp) return last.pending;
+      var pending = build();
+      last = { stamp: exportStamp, pending: pending };
+      pending.catch(function () { last = null; });
+      return pending;
+    }
+    $(btnSel).addEventListener('click', function () {
+      var btn = this;
+      btn.disabled = true;
+      setMsg(msgSel, 'Building your save…');
+      copyPending(cached()).then(function (res) {
+        if (res.copied) {
+          setMsg(msgSel, 'Copied to your clipboard. ' + res.r.note + ' In game: Settings, then Import save.', 'ok');
+          toast('New save copied');
+        } else {
+          setMsg(msgSel, 'Your browser blocked the copy, so the save is open to copy by hand. ' + res.r.note);
+          showSaveDialog(res.r.save, res.r.note);
+        }
+      }, function (err) {
+        setMsg(msgSel, err.message, 'err');
+      }).then(function () { btn.disabled = false; });
+    });
+    $(showSel).addEventListener('click', function () {
+      cached().then(function (r) { showSaveDialog(r.save, r.note); }, function (err) { setMsg(msgSel, err.message, 'err'); });
+    });
+  }
+
+  function buildAncientExport() {
+    if (!state.save) return Promise.reject(new Error('Paste a save first.'));
+    var o = readOpts();
+    return E.autoLevel(state.save.data, state.save.type, o).then(function (r) {
+      return { save: r.save, note: 'Spends ' + show(r.spent) + ' hero souls' + (state.save.sample ? ' from the example save' : '') + '.' };
+    }, function (err) {
+      throw new Error(err && err.message === 'no ancients' ? 'There are no summoned ancients to level.' : 'This browser could not compress the save.');
+    });
+  }
+  wireExport('#exportBtn', '#showExport', '#exportNote', buildAncientExport);
+
+  /* ---------- outsider planner (root2) ---------- */
+  var O = Outsiders;
+  var oel = {
+    as: $('#outAs'), asErr: $('#outAsErr'), skip: $('#outSkip'), tips: $('#outTips'), ledger: $('#outLedger'),
+    share: $('#shareCode'), tipsCard: $('#tipsCard'), tipList: $('#tipList'), options: $('#outOptions')
+  };
+  var nf = function (v) { return Number(v).toLocaleString('en-US'); };
+
+  var OUT_OVERRIDE = 'The plan uses the ancient souls you typed, not the ones in your save. Clear that field to export.';
+
+  function readOut() {
+    var saved = Number(state.save.data.ancientSoulsTotal || 0);
+    if (!isFinite(saved) || saved < 0) saved = 0;
+    var raw = oel.as.value.trim().replace(/,/g, '');
+    var as = saved;
+    oel.asErr.hidden = true;
+    if (raw !== '') {
+      as = parseFloat(raw);
+      if (!(as >= 0) || !isFinite(as)) { oel.asErr.hidden = false; return null; }
+    }
+    return { as: as, saved: saved, override: as !== saved, skip: oel.skip.checked };
+  }
+
+  function currentOutsiders() {
+    if (state.save.sample) return null;       // the example is not a root2 save
+    var src = state.save.data.outsiders && state.save.data.outsiders.outsiders;
+    if (!src) return null;
+    var out = {};
+    O.ORDER.forEach(function (x) { out[x.key] = src[x.id] ? Number(src[x.id].level) : 0; });
+    return out;
+  }
+
+  function stat(k, v) { return '<div><span class="k">' + k + '</span><span class="v">' + v + '</span></div>'; }
+
+  function updateOutsiders() {
+    var o = readOut();
+    if (!o) return;
+    var p;
+    try { p = O.plan(o.as, o.skip); }
+    catch (err) { console.error(err); return; }
+    state.plan = p;
+    state.planOverride = o.override;
+    oel.as.placeholder = 'Using ' + nf(o.saved) + ' from your save';
+
+    var goal = p.targetAS === 'cap' ? 'the hard cap' : nf(p.targetAS) + ' ancient souls';
+    setText('#oAs', nf(p.ancientSouls));
+    setText('#oAsNote', 'TP ' + Number(p.tpNow.toFixed(4)) + '% now');
+    setText('#oUnspent', nf(p.unspent));
+    setText('#oHze', nf(p.newHze));
+    setText('#oHzeNote', 'aiming for ' + goal);
+    setText('#oAsAfter', nf(p.newAncientSouls));
+    $('#oAsAfterNote').innerHTML = '<b>+' + nf(p.ancientSoulsDiff) + '</b> and TP ' + p.newTP + '%';
+
+    // recommendations
+    var now = currentOutsiders();
+    var total = 0;
+    O.ORDER.forEach(function (x) { total += p.costs[x.key]; });
+    var html = '<li class="head" aria-hidden="true"><span>Outsider</span><span>Now</span><span>Recommended</span><span>Cost in ancient souls</span></li>';
+    O.ORDER.forEach(function (x) {
+      var lvl = p.levels[x.key], cost = p.costs[x.key];
+      var share = total > 0 ? cost / total * 100 : 0;
+      var nowCell = now === null ? '<span class="num">-</span>'
+        : '<span class="now-cell"><span class="num">' + nf(now[x.key]) + '</span>' +
+          (now[x.key] > lvl ? '<span class="chip err">respec</span>' : '') + '</span>';
+      html += '<li><span class="name">' + x.name + '</span>' +
+        '<span class="cell now" data-label="Now">' + nowCell + '</span>' +
+        '<span class="lvl" data-label="Recommended">' + nf(lvl) + '</span>' +
+        '<span class="cell cost" data-label="Cost in ancient souls"><span class="num">' + nf(cost) + '</span>' +
+        '<span class="meter" title="' + share.toFixed(share < 10 ? 1 : 0) + '% of the souls spent"><i style="width:' + (share > 0 ? Math.max(2, share) : 0) + '%"></i></span></span></li>';
+    });
+    oel.ledger.innerHTML = html;
+    oel.share.textContent = p.share;
+
+    // estimates
+    $('#estKv').innerHTML =
+      stat('Highest zone', nf(p.newHze)) +
+      stat('Hero souls (log10)', p.newLogHeroSouls.toFixed(2)) +
+      stat('Ancient souls', nf(p.newAncientSouls) + ' (+' + nf(p.ancientSoulsDiff) + ')') +
+      stat('TP after the run', p.newTP + '%') +
+      stat('Ancient levels', nf(p.ancientLevels));
+    var b = p.buffed, lo = p.buffedLow;
+    var mpz = function (x) { return x.toFixed(2) + (x < 2 ? ' (2)' : ''); };
+    var rng = function (a, c) { return c === null ? a : a + ' to ' + c; };
+    $('#buffKv').innerHTML =
+      stat('Monsters per zone', rng(mpz(b.mpz), lo && mpz(lo.mpz))) +
+      stat('Treasure chests', rng(b.tcc.toFixed() + '%', lo && lo.tcc.toFixed() + '%')) +
+      stat('Boss health', rng(b.bossHp.toFixed() + 'x', lo && lo.bossHp.toFixed() + 'x')) +
+      stat('Boss timer', rng(b.timer.toFixed() + 's', lo && lo.timer.toFixed() + 's')) +
+      stat('Primal boss chance', rng(b.pbc.toFixed() + '%', lo && lo.pbc.toFixed() + '%'));
+    $('#buffNote').hidden = !lo;
+
+    // notes
+    oel.tipsCard.hidden = !oel.tips.checked;
+    oel.tipList.innerHTML = O.notes(p.ancientSouls, o.skip).map(function (t) { return '<li>' + t + '</li>'; }).join('');
+
+    // export needs the plan to match the save
+    $('#outExportBtn').disabled = $('#outShowExport').disabled = o.override;
+    if (o.override) setMsg('#outExportNote', OUT_OVERRIDE, 'err');
+    else setMsg('#outExportNote', '');
+  }
+
+  oel.as.addEventListener('input', updateSoon);
+  oel.skip.addEventListener('change', function () { saveSettings(); update(); });
+  oel.tips.addEventListener('change', function () { saveSettings(); update(); });
+
+  $('#copyShare').addEventListener('click', function () {
+    if (state.plan) copyText(state.plan.share, 'Copied the build code');
+  });
+  function buildOutsiderExport() {
+    if (!state.save || !state.plan) return Promise.reject(new Error('Paste a save first.'));
+    if (state.planOverride) return Promise.reject(new Error(OUT_OVERRIDE));
+    var r = O.applyToSave(state.save.data, state.plan);
+    if (r.error) return Promise.reject(new Error('Respec these in the game first, they are above their recommended level: ' + r.tooHigh.join(', ') + '.' +
+      (state.save.sample ? ' That is the example save, which is not a root2 save, so paste your own.' : '')));
+    var spent = state.plan.ancientSouls - state.plan.unspent;
+    return E.encodeSave(r.data, 'zlib').then(function (save) {
+      return { save: save, note: 'Spends ' + nf(spent) + ' ancient souls' + (state.save.sample ? ' from the example save' : '') + '.' };
+    }, function () { throw new Error('This browser could not compress the save.'); });
+  }
+  wireExport('#outExportBtn', '#outShowExport', '#outExportNote', buildOutsiderExport);
+
+  /* ---------- calculator switch ---------- */
+  var SUBTITLE = {
+    ancients: 'Optimal ancient levels for your hero souls. Rules of v1.0e10.',
+    outsiders: 'Outsider levels from your ancient souls, for the root2 mod. Based on driej’s planner.'
+  };
+  function setMode(m) {
+    m = m === 'outsiders' ? 'outsiders' : 'ancients';
+    var out = m === 'outsiders';
+    mode = m;
+    $('#ancientView').hidden = out;
+    $('#outsiderView').hidden = !out;
+    el.options.hidden = out;
+    oel.options.hidden = !out;
+    document.querySelectorAll('.mode').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.mode === m ? 'true' : 'false'); });
+    $('#subtitle').textContent = SUBTITLE[m];
+    update();
+  }
+  document.querySelectorAll('.mode').forEach(function (b) {
+    b.addEventListener('click', function () {
+      setMode(b.dataset.mode);
+      try { if (location.hash !== '#' + b.dataset.mode) location.hash = b.dataset.mode; } catch (e) { /* hash writes can be blocked */ }
+    });
+  });
+  window.addEventListener('hashchange', function () {
+    var m = location.hash === '#outsiders' ? 'outsiders' : 'ancients';
+    if (m !== mode) setMode(m);
+  });
+
+  /* ---------- start ---------- */
+  loadSettings();
+  el.otherSub.hidden = !el.other.checked;
+  if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) { el.options.open = false; oel.options.open = false; }
+  if (location.hash === '#outsiders') setMode('outsiders');
+  loadSave(JSON.stringify(SAMPLE_SAVE), true);
+})();
+</script>
+
+</body>
+</html>
